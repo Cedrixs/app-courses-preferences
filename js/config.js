@@ -7,7 +7,7 @@
 // la Row Level Security (RLS), configurée via sql/schema.sql, qui
 // protège réellement les données.
 const SUPABASE_CONFIG = {
-  url: 'https://ghbqykqeupjcpkookecep.supabase.co',
+  url: 'https://ghbqykqeupjcpkoockep.supabase.co',
   anonKey:
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdoYnF5a3FldXBqY3Brb29ja2VwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM5MzkzNTYsImV4cCI6MjA5OTUxNTM1Nn0.FpUVOIOpHx4fTSL2gdQeM8n4WIVxeHwXe4h2p1p6moU',
 };
