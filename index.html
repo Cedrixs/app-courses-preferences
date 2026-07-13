@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+<title>Courses & Préférences</title>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#2e7d5b" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Courses" />
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+<link rel="icon" href="icons/icon-192.png" />
+
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<div id="app">
+
+  <!-- =================================================================
+       Écran de chargement initial (le temps de vérifier la session)
+       ================================================================= -->
+  <div v-if="view === 'loading'" class="loading-screen">Chargement…</div>
+
+  <!-- =================================================================
+       Écran de sélection du rôle
+       ================================================================= -->
+  <div v-if="view === 'role-select'" class="role-screen">
+    <h1>Courses & Préférences</h1>
+    <p>Qui es-tu ?</p>
+    <div class="role-buttons">
+      <button class="role-button" @click="chooseRole('consommateur')">🍽️ Consommateur</button>
+      <button class="role-button acheteur" @click="chooseRole('acheteur')">🛒 Acheteur</button>
+    </div>
+  </div>
+
+  <!-- =================================================================
+       Écran de saisie du code PIN
+       ================================================================= -->
+  <div v-if="view === 'pin'" class="pin-screen">
+    <button class="pin-back link-btn" @click="backToRoleSelect">&larr; Retour</button>
+    <h2>{{ pendingRole === 'consommateur' ? '🍽️ Consommateur' : '🛒 Acheteur' }}</h2>
+    <div class="pin-dots">
+      <div class="pin-dot" :class="{ filled: pinInput.length > 0 }"></div>
+      <div class="pin-dot" :class="{ filled: pinInput.length > 1 }"></div>
+      <div class="pin-dot" :class="{ filled: pinInput.length > 2 }"></div>
+      <div class="pin-dot" :class="{ filled: pinInput.length > 3 }"></div>
+    </div>
+    <div class="pin-error">{{ pinError }}</div>
+    <div class="pin-keypad">
+      <button class="pin-key" v-for="n in [1,2,3,4,5,6,7,8,9]" :key="n" @click="pressPinKey(String(n))">{{ n }}</button>
+      <div class="pin-key empty"></div>
+      <button class="pin-key" @click="pressPinKey('0')">0</button>
+      <button class="pin-key" @click="pressPinBackspace">⌫</button>
+    </div>
+  </div>
+
+  <!-- =================================================================
+       Application principale (une fois connecté)
+       ================================================================= -->
+  <template v-if="view === 'categories' || view === 'category-detail'">
+
+    <div class="top-bar">
+      <button v-if="view === 'category-detail'" class="top-bar-btn" @click="goToCategories">&larr;</button>
+      <h1>{{ view === 'category-detail' && currentCategory ? currentCategory.name : 'Catégories' }}</h1>
+      <span class="role-badge">{{ role === 'consommateur' ? '🍽️ Consommateur' : '🛒 Acheteur' }}</span>
+      <button class="top-bar-btn" @click="doLogout">Déconnexion</button>
+    </div>
+
+    <div v-if="errorMessage" class="banner error">{{ errorMessage }}</div>
+    <div v-if="successMessage" class="banner success">{{ successMessage }}</div>
+
+    <!-- ---------------- Vue : liste des catégories ---------------- -->
+    <div v-if="view === 'categories'" class="view">
+      <button class="top-bar-btn" style="margin-bottom:14px;background:#e2e1da;color:#22271f" @click="openManageCategories">⚙️ Gérer les catégories</button>
+
+      <div v-if="loadingCategories" class="empty-hint">Chargement des catégories…</div>
+      <div v-else class="category-grid">
+        <button
+          v-for="cat in categories"
+          :key="cat.id"
+          class="category-card"
+          @click="openCategory(cat)"
+        >
+          <span class="category-icon">{{ categoryIcon(cat.name) }}</span>
+          <span class="category-name">{{ cat.name }}</span>
+        </button>
+      </div>
+
+      <button class="fab" @click="openAddPhotoModal(null)">+</button>
+    </div>
+
+    <!-- ---------------- Vue : détail d'une catégorie ---------------- -->
+    <div v-if="view === 'category-detail'" class="view">
+      <div v-if="loadingPhotos" class="empty-hint">Chargement des photos…</div>
+
+      <template v-else>
+        <div class="section-title">Classement</div>
+        <div v-if="rankedPhotos.length === 0" class="empty-hint">Aucune photo classée pour le moment.</div>
+        <div ref="rankedList" class="photo-list">
+          <div
+            v-for="(photo, index) in rankedPhotos"
+            :key="photo.id"
+            :data-id="photo.id"
+            class="photo-card"
+            :class="{ draggable: role === 'consommateur' }"
+          >
+            <img class="photo-thumb" :src="photoUrl(photo)" @click="openLightbox(photo)" alt="" />
+            <div class="photo-info">
+              <div class="photo-name-row">
+                <span class="photo-rank">{{ index + 1 }}</span>
+                <span class="photo-name">{{ photo.product_name }}</span>
+                <span v-if="index === 0" class="badge-preferred">Préféré</span>
+              </div>
+              <div class="photo-author">Ajouté par {{ photo.uploaded_by }}</div>
+              <div class="photo-actions">
+                <button class="link-btn" @click="toggleComments(photo)">
+                  💬 {{ photo.comments.length }}
+                </button>
+                <button
+                  v-if="role === 'consommateur' && photo.uploaded_by === 'consommateur'"
+                  class="link-btn danger"
+                  @click="confirmDeletePhoto(photo)"
+                >
+                  Supprimer
+                </button>
+              </div>
+
+              <div v-if="openCommentsFor === photo.id" class="comments-box">
+                <div v-for="c in photo.comments" :key="c.id" class="comment-item">
+                  <span class="comment-author">{{ c.author }} :</span> {{ c.text }}
+                </div>
+                <div class="comment-form">
+                  <input
+                    type="text"
+                    v-model="newCommentDrafts[photo.id]"
+                    placeholder="Ajouter un commentaire…"
+                    @keyup.enter="submitComment(photo)"
+                  />
+                  <button @click="submitComment(photo)">Envoyer</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-title">À évaluer</div>
+        <div v-if="unrankedPhotos.length === 0" class="empty-hint">Aucune photo à évaluer pour le moment.</div>
+        <div ref="unrankedList" class="photo-list">
+          <div
+            v-for="photo in unrankedPhotos"
+            :key="photo.id"
+            :data-id="photo.id"
+            class="photo-card"
+            :class="{ draggable: role === 'consommateur' }"
+          >
+            <img class="photo-thumb" :src="photoUrl(photo)" @click="openLightbox(photo)" alt="" />
+            <div class="photo-info">
+              <div class="photo-name-row">
+                <span class="photo-name">{{ photo.product_name }}</span>
+              </div>
+              <div class="photo-author">Proposé par {{ photo.uploaded_by }}</div>
+              <div class="photo-actions">
+                <button class="link-btn" @click="toggleComments(photo)">
+                  💬 {{ photo.comments.length }}
+                </button>
+              </div>
+              <div v-if="openCommentsFor === photo.id" class="comments-box">
+                <div v-for="c in photo.comments" :key="c.id" class="comment-item">
+                  <span class="comment-author">{{ c.author }} :</span> {{ c.text }}
+                </div>
+                <div class="comment-form">
+                  <input
+                    type="text"
+                    v-model="newCommentDrafts[photo.id]"
+                    placeholder="Ajouter un commentaire…"
+                    @keyup.enter="submitComment(photo)"
+                  />
+                  <button @click="submitComment(photo)">Envoyer</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p v-if="role === 'consommateur' && unrankedPhotos.length > 0" class="empty-hint">Glisse une photo vers "Classement" pour lui donner un rang.</p>
+      </template>
+
+      <button class="fab" @click="openAddPhotoModal(currentCategory)">+</button>
+    </div>
+  </template>
+
+  <!-- =================================================================
+       Modale : ajout d'une photo
+       ================================================================= -->
+  <div v-if="showAddPhotoModal" class="modal-overlay" @click.self="closeAddPhotoModal">
+    <div class="modal-sheet">
+      <button class="modal-close" @click="closeAddPhotoModal">✕</button>
+      <h2>Ajouter une photo</h2>
+
+      <div class="form-field">
+        <label>Catégorie</label>
+        <select v-model="addPhotoCategoryId">
+          <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+        </select>
+      </div>
+
+      <div class="capture-buttons">
+        <label>
+          📷 Prendre une photo
+          <input type="file" accept="image/*" capture="environment" @change="onPhotoFileSelected" />
+        </label>
+        <label>
+          🖼️ Depuis la galerie
+          <input type="file" accept="image/*" @change="onPhotoFileSelected" />
+        </label>
+      </div>
+
+      <img v-if="addPhotoPreviewUrl" class="image-preview" :src="addPhotoPreviewUrl" alt="Aperçu" />
+
+      <div class="form-field">
+        <label>Nom du produit</label>
+        <input type="text" v-model="addPhotoProductName" placeholder="Ex : Yaourt nature Danone" />
+      </div>
+
+      <button class="primary-btn" :disabled="!canSubmitPhoto || uploading" @click="submitAddPhoto">
+        <span v-if="uploading" class="spinner"></span>{{ uploading ? 'Envoi en cours…' : 'Ajouter' }}
+      </button>
+      <button class="secondary-btn" @click="closeAddPhotoModal">Terminé</button>
+    </div>
+  </div>
+
+  <!-- =================================================================
+       Modale : gestion des catégories
+       ================================================================= -->
+  <div v-if="showManageCategories" class="modal-overlay" @click.self="showManageCategories = false">
+    <div class="modal-sheet">
+      <button class="modal-close" @click="showManageCategories = false">✕</button>
+      <h2>Gérer les catégories</h2>
+
+      <div v-for="cat in categories" :key="cat.id" class="category-manage-row">
+        <input type="text" v-model="categoryEdits[cat.id]" />
+        <button class="icon-btn" @click="saveRenameCategory(cat)">💾</button>
+        <button class="icon-btn danger" @click="confirmDeleteCategory(cat)">🗑️</button>
+      </div>
+
+      <div class="add-category-row">
+        <input type="text" v-model="newCategoryName" placeholder="Nouvelle catégorie…" @keyup.enter="submitAddCategory" />
+        <button class="icon-btn" @click="submitAddCategory">➕</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =================================================================
+       Lightbox (photo en plein écran)
+       ================================================================= -->
+  <div v-if="lightboxPhoto" class="lightbox" @click.self="closeLightbox">
+    <button class="lightbox-close" @click="closeLightbox">✕</button>
+    <img :src="photoUrl(lightboxPhoto)" alt="" />
+  </div>
+
+</div>
+
+<!-- =================================================================
+     Bibliothèques externes (via CDN, sans étape de build)
+     ================================================================= -->
+<script src="https://unpkg.com/vue@3.4.21/dist/vue.global.prod.js"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2.43.4/dist/umd/supabase.js"></script>
+<script src="https://unpkg.com/sortablejs@1.15.2/Sortable.min.js"></script>
+
+<!-- =================================================================
+     Code de l'application
+     ================================================================= -->
+<script src="js/config.js"></script>
+<script src="js/supabase-client.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/image-utils.js"></script>
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('service-worker.js').catch(() => {
+        // L'échec d'enregistrement du service worker n'empêche pas l'app de fonctionner.
+      });
+    });
+  }
+</script>
+
+</body>
+</html>
