@@ -196,5 +196,169 @@ create policy "photos_bucket_delete_consommateur_only"
   );
 
 -- =====================================================================
+-- 12. Liste de courses
+-- =====================================================================
+-- Une seule liste "active" existe à la fois (contrainte d'unicité
+-- partielle ci-dessous). Quand le consommateur termine ses courses,
+-- la liste active est archivée (consultable en historique) et une
+-- nouvelle liste vide est créée automatiquement — voir la fonction
+-- terminer_liste_courses() plus bas.
+
+create table if not exists public.shopping_lists (
+  id uuid primary key default gen_random_uuid(),
+  status text not null default 'active' check (status in ('active', 'archived')),
+  created_at timestamptz not null default now(),
+  archived_at timestamptz
+);
+
+-- Garantit qu'il n'existe jamais plus d'une liste "active" en même temps.
+create unique index if not exists shopping_lists_one_active_idx
+  on public.shopping_lists (status)
+  where status = 'active';
+
+create table if not exists public.shopping_list_items (
+  id uuid primary key default gen_random_uuid(),
+  list_id uuid not null references public.shopping_lists(id) on delete cascade,
+  category_id uuid not null references public.categories(id) on delete cascade,
+  -- La photo est facultative (article texte libre) et peut disparaître
+  -- si le consommateur supprime la photo du catalogue plus tard : dans
+  -- ce cas l'article de la liste garde son nom (label) mais perd juste
+  -- son image.
+  photo_id uuid references public.photos(id) on delete set null,
+  label text not null,
+  quantity integer not null default 1 check (quantity >= 1),
+  taken boolean not null default false,
+  taken_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists shopping_list_items_list_id_idx on public.shopping_list_items(list_id);
+
+alter table public.shopping_lists enable row level security;
+alter table public.shopping_list_items enable row level security;
+
+-- ---------------------------------------------------------------------
+-- Policies : shopping_lists
+-- Seul le consommateur crée/archive des listes. Les deux rôles
+-- consultent (liste active + historique).
+-- ---------------------------------------------------------------------
+create policy "shopping_lists_select_authenticated"
+  on public.shopping_lists for select
+  to authenticated
+  using (true);
+
+create policy "shopping_lists_insert_consommateur_only"
+  on public.shopping_lists for insert
+  to authenticated
+  with check (public.current_role_name() = 'consommateur');
+
+create policy "shopping_lists_update_consommateur_only"
+  on public.shopping_lists for update
+  to authenticated
+  using (public.current_role_name() = 'consommateur')
+  with check (public.current_role_name() = 'consommateur');
+
+-- ---------------------------------------------------------------------
+-- Policies : shopping_list_items
+-- - Lecture : les deux rôles.
+-- - Ajout / suppression : consommateur uniquement.
+-- - Modification : autorisée pour les deux rôles au niveau ligne, mais
+--   restreinte au niveau colonne par le trigger ci-dessous (le
+--   consommateur gère quantité/contenu, l'acheteur gère uniquement le
+--   statut "pris" — RLS seule ne sait pas restreindre par colonne).
+-- ---------------------------------------------------------------------
+create policy "shopping_list_items_select_authenticated"
+  on public.shopping_list_items for select
+  to authenticated
+  using (true);
+
+create policy "shopping_list_items_insert_consommateur_only"
+  on public.shopping_list_items for insert
+  to authenticated
+  with check (
+    public.current_role_name() = 'consommateur'
+    and taken = false
+    and taken_at is null
+  );
+
+create policy "shopping_list_items_update_authenticated"
+  on public.shopping_list_items for update
+  to authenticated
+  using (true)
+  with check (true);
+
+create policy "shopping_list_items_delete_consommateur_only"
+  on public.shopping_list_items for delete
+  to authenticated
+  using (public.current_role_name() = 'consommateur');
+
+-- Contrôle fin par colonne, complémentaire aux policies RLS ci-dessus :
+-- l'acheteur ne peut toucher qu'au statut "pris", le consommateur ne
+-- peut pas y toucher lui-même (c'est l'acheteur qui coche pendant les
+-- courses).
+create or replace function public.enforce_shopping_list_item_update()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if public.current_role_name() = 'acheteur' then
+    if new.list_id is distinct from old.list_id
+       or new.category_id is distinct from old.category_id
+       or new.photo_id is distinct from old.photo_id
+       or new.label is distinct from old.label
+       or new.quantity is distinct from old.quantity
+    then
+      raise exception 'acheteur : seul le statut pris peut être modifié';
+    end if;
+  elsif public.current_role_name() = 'consommateur' then
+    if new.taken is distinct from old.taken
+       or new.taken_at is distinct from old.taken_at
+    then
+      raise exception 'consommateur : le statut pris est réservé à l''acheteur';
+    end if;
+  else
+    raise exception 'rôle inconnu';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists shopping_list_items_update_guard on public.shopping_list_items;
+create trigger shopping_list_items_update_guard
+  before update on public.shopping_list_items
+  for each row
+  execute function public.enforce_shopping_list_item_update();
+
+-- Termine la liste active (l'archive) et en recrée une nouvelle vide,
+-- en une seule opération atomique. Réservé au consommateur.
+create or replace function public.terminer_liste_courses()
+returns public.shopping_lists
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  nouvelle public.shopping_lists;
+begin
+  if public.current_role_name() <> 'consommateur' then
+    raise exception 'seul le consommateur peut terminer la liste de courses';
+  end if;
+
+  update public.shopping_lists
+  set status = 'archived', archived_at = now()
+  where status = 'active';
+
+  insert into public.shopping_lists (status) values ('active')
+  returning * into nouvelle;
+
+  return nouvelle;
+end;
+$$;
+
+grant execute on function public.terminer_liste_courses() to authenticated;
+
+-- =====================================================================
 -- Fin du script.
 -- =====================================================================

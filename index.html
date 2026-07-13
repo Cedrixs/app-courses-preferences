@@ -63,13 +63,22 @@
   <!-- =================================================================
        Application principale (une fois connecté)
        ================================================================= -->
-  <template v-if="view === 'categories' || view === 'category-detail'">
+  <template v-if="view === 'categories' || view === 'category-detail' || view === 'shopping-list'">
 
     <div class="top-bar">
       <button v-if="view === 'category-detail'" class="top-bar-btn" @click="goToCategories">&larr;</button>
-      <h1>{{ view === 'category-detail' && currentCategory ? currentCategory.name : 'Catégories' }}</h1>
+      <h1>
+        <template v-if="view === 'category-detail' && currentCategory">{{ currentCategory.name }}</template>
+        <template v-else-if="view === 'shopping-list'">Liste de courses</template>
+        <template v-else>Catégories</template>
+      </h1>
       <span class="role-badge">{{ role === 'consommateur' ? '🍽️ Consommateur' : '🛒 Acheteur' }}</span>
       <button class="top-bar-btn" @click="doLogout">Déconnexion</button>
+    </div>
+
+    <div v-if="selectionMode" class="selection-banner">
+      🛒 Touche une photo pour l'ajouter à la liste
+      <button @click="exitSelectionMode">Terminer</button>
     </div>
 
     <div v-if="errorMessage" class="banner error">{{ errorMessage }}</div>
@@ -110,7 +119,7 @@
             class="photo-card"
             :class="{ draggable: role === 'consommateur' }"
           >
-            <img class="photo-thumb" :src="photoUrl(photo)" @click="openLightbox(photo)" alt="" />
+            <img class="photo-thumb" :src="photoUrl(photo)" @click="onPhotoThumbClick(photo)" alt="" />
             <div class="photo-info">
               <div class="photo-name-row">
                 <span class="photo-rank">{{ index + 1 }}</span>
@@ -160,7 +169,7 @@
             class="photo-card"
             :class="{ draggable: role === 'consommateur' }"
           >
-            <img class="photo-thumb" :src="photoUrl(photo)" @click="openLightbox(photo)" alt="" />
+            <img class="photo-thumb" :src="photoUrl(photo)" @click="onPhotoThumbClick(photo)" alt="" />
             <div class="photo-info">
               <div class="photo-name-row">
                 <span class="photo-name">{{ photo.product_name }}</span>
@@ -201,6 +210,96 @@
 
       <button class="fab" @click="openAddPhotoModal(currentCategory)">+</button>
     </div>
+
+    <!-- ---------------- Vue : liste de courses ---------------- -->
+    <div v-if="view === 'shopping-list'" class="view">
+      <div v-if="loadingShoppingList" class="empty-hint">Chargement de la liste…</div>
+
+      <template v-else>
+        <div v-if="!shoppingList" class="empty-hint">
+          Le consommateur n'a pas encore créé de liste de courses.
+        </div>
+
+        <template v-else>
+          <div v-if="shoppingListItems.length === 0" class="empty-hint">
+            La liste est vide pour le moment.
+          </div>
+
+          <div class="shopping-item-list">
+            <div
+              v-for="item in shoppingListItems"
+              :key="item.id"
+              class="shopping-item"
+              :class="{ taken: item.taken }"
+            >
+              <img
+                v-if="item.photos"
+                class="shopping-item-thumb"
+                :src="photoUrl(item.photos)"
+                @click="openLightbox(item.photos)"
+                alt=""
+              />
+              <div v-else class="shopping-item-thumb shopping-item-thumb-placeholder">📝</div>
+
+              <div
+                class="shopping-item-info"
+                :class="{ tappable: role === 'acheteur' }"
+                @click="toggleItemTaken(item)"
+              >
+                <div class="shopping-item-name">{{ item.label }}</div>
+                <div class="shopping-item-category">{{ item.categories ? item.categories.name : '' }}</div>
+              </div>
+
+              <div class="shopping-item-qty" v-if="role === 'consommateur'">
+                <button class="qty-btn" :disabled="item.quantity <= 1" @click="decrementItem(item)">−</button>
+                <span>{{ item.quantity }}</span>
+                <button class="qty-btn" @click="incrementItem(item)">+</button>
+              </div>
+              <div class="shopping-item-qty-readonly" v-else>× {{ item.quantity }}</div>
+
+              <button
+                v-if="role === 'consommateur'"
+                class="delete-photo-btn"
+                @click="deleteListItem(item)"
+                aria-label="Retirer de la liste"
+              >
+                🗑️
+              </button>
+            </div>
+          </div>
+
+          <template v-if="role === 'consommateur'">
+            <button class="secondary-btn" @click="enterSelectionMode">📷 Ajouter depuis les catégories</button>
+            <button class="secondary-btn" @click="openAddTextItemModal">✏️ Ajouter un article texte</button>
+            <button
+              v-if="shoppingListItems.length > 0"
+              class="secondary-btn danger-btn"
+              @click="confirmTerminerListe"
+            >
+              ✅ Terminer les courses
+            </button>
+          </template>
+        </template>
+      </template>
+    </div>
+
+    <!-- ---------------- Navigation basse ---------------- -->
+    <div class="bottom-nav">
+      <button
+        class="bottom-nav-btn"
+        :class="{ active: view === 'categories' || view === 'category-detail' }"
+        @click="goToCategories"
+      >
+        📂 Catégories
+      </button>
+      <button
+        class="bottom-nav-btn"
+        :class="{ active: view === 'shopping-list' }"
+        @click="openShoppingList"
+      >
+        🛒 Liste<span v-if="shoppingListPendingCount > 0"> ({{ shoppingListPendingCount }})</span>
+      </button>
+    </div>
   </template>
 
   <!-- =================================================================
@@ -240,6 +339,41 @@
         <span v-if="uploading" class="spinner"></span>{{ uploading ? 'Envoi en cours…' : 'Ajouter' }}
       </button>
       <button class="secondary-btn" @click="closeAddPhotoModal">Terminé</button>
+    </div>
+  </div>
+
+  <!-- =================================================================
+       Modale : ajout d'un article texte à la liste de courses
+       ================================================================= -->
+  <div v-if="showAddTextItemModal" class="modal-overlay" @click.self="showAddTextItemModal = false">
+    <div class="modal-sheet">
+      <button class="modal-close" @click="showAddTextItemModal = false">✕</button>
+      <h2>Ajouter un article texte</h2>
+
+      <div class="form-field">
+        <label>Catégorie</label>
+        <select v-model="addTextItemCategoryId">
+          <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+        </select>
+      </div>
+
+      <div class="form-field">
+        <label>Nom de l'article</label>
+        <input
+          type="text"
+          v-model="addTextItemLabel"
+          placeholder="Ex : Papier toilette"
+          @keyup.enter="submitAddTextItem"
+        />
+      </div>
+
+      <button
+        class="primary-btn"
+        :disabled="!addTextItemLabel.trim() || !addTextItemCategoryId"
+        @click="submitAddTextItem"
+      >
+        Ajouter
+      </button>
     </div>
   </div>
 

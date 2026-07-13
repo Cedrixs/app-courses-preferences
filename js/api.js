@@ -142,4 +142,124 @@ const api = {
         .single()
     );
   },
+
+  // ---------------------------------------------------------------
+  // Liste de courses
+  // ---------------------------------------------------------------
+  /** Renvoie la liste active, ou null s'il n'y en a aucune. */
+  async fetchActiveList() {
+    const rows = unwrap(
+      await supabaseClient.from('shopping_lists').select('*').eq('status', 'active').limit(1)
+    );
+    return rows.length ? rows[0] : null;
+  },
+
+  /** Crée la liste active (réservé au consommateur, voir policies RLS). */
+  async createActiveList() {
+    return unwrap(
+      await supabaseClient
+        .from('shopping_lists')
+        .insert({ status: 'active' })
+        .select()
+        .single()
+    );
+  },
+
+  async fetchListItems(listId) {
+    return unwrap(
+      await supabaseClient
+        .from('shopping_list_items')
+        .select('*, categories(name), photos(image_path)')
+        .eq('list_id', listId)
+        .order('created_at')
+    );
+  },
+
+  /**
+   * Ajoute une photo à la liste, ou incrémente sa quantité si elle y
+   * figure déjà (et n'est pas encore marquée "prise").
+   */
+  async addPhotoToList({ listId, photo, existingItem }) {
+    if (existingItem) {
+      return api.incrementListItem(existingItem);
+    }
+    return unwrap(
+      await supabaseClient
+        .from('shopping_list_items')
+        .insert({
+          list_id: listId,
+          category_id: photo.category_id,
+          photo_id: photo.id,
+          label: photo.product_name,
+          quantity: 1,
+        })
+        .select('*, categories(name), photos(image_path)')
+        .single()
+    );
+  },
+
+  /** Ajoute un article texte libre, ou incrémente s'il existe déjà (même nom, même catégorie, non pris). */
+  async addTextItemToList({ listId, categoryId, label, existingItem }) {
+    if (existingItem) {
+      return api.incrementListItem(existingItem);
+    }
+    return unwrap(
+      await supabaseClient
+        .from('shopping_list_items')
+        .insert({
+          list_id: listId,
+          category_id: categoryId,
+          photo_id: null,
+          label,
+          quantity: 1,
+        })
+        .select('*, categories(name), photos(image_path)')
+        .single()
+    );
+  },
+
+  async incrementListItem(item) {
+    return unwrap(
+      await supabaseClient
+        .from('shopping_list_items')
+        .update({ quantity: item.quantity + 1 })
+        .eq('id', item.id)
+        .select('*, categories(name), photos(image_path)')
+        .single()
+    );
+  },
+
+  async decrementListItem(item) {
+    if (item.quantity <= 1) return item;
+    return unwrap(
+      await supabaseClient
+        .from('shopping_list_items')
+        .update({ quantity: item.quantity - 1 })
+        .eq('id', item.id)
+        .select('*, categories(name), photos(image_path)')
+        .single()
+    );
+  },
+
+  async deleteListItem(id) {
+    return unwrap(await supabaseClient.from('shopping_list_items').delete().eq('id', id));
+  },
+
+  /** Bascule le statut "pris" d'un article (réservé à l'acheteur, voir trigger RLS). */
+  async toggleListItemTaken(item) {
+    const taken = !item.taken;
+    return unwrap(
+      await supabaseClient
+        .from('shopping_list_items')
+        .update({ taken, taken_at: taken ? new Date().toISOString() : null })
+        .eq('id', item.id)
+        .select('*, categories(name), photos(image_path)')
+        .single()
+    );
+  },
+
+  /** Archive la liste active et en crée une nouvelle vide, de façon atomique (réservé au consommateur). */
+  async terminerListeCourses() {
+    return unwrap(await supabaseClient.rpc('terminer_liste_courses'));
+  },
 };
