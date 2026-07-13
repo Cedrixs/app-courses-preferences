@@ -118,8 +118,9 @@ create policy "categories_delete_authenticated"
 --   avec son propre nom (uploaded_by = son rôle). Les photos ajoutées
 --   par l'acheteur doivent avoir priority_rank = null.
 -- - Mise à jour du classement (priority_rank) : consommateur uniquement.
--- - Suppression : le consommateur peut supprimer uniquement ses propres
---   photos (celles qu'il a lui-même ajoutées).
+-- - Suppression : le consommateur peut supprimer n'importe quelle photo
+--   (les siennes et celles proposées par l'acheteur) puisque c'est lui
+--   qui a le dernier mot sur les préférences.
 -- ---------------------------------------------------------------------
 create policy "photos_select_authenticated"
   on public.photos for select
@@ -143,13 +144,10 @@ create policy "photos_update_rank_consommateur_only"
   using (public.current_role_name() = 'consommateur')
   with check (public.current_role_name() = 'consommateur');
 
-create policy "photos_delete_own_consommateur_only"
+create policy "photos_delete_consommateur_only"
   on public.photos for delete
   to authenticated
-  using (
-    public.current_role_name() = 'consommateur'
-    and uploaded_by = 'consommateur'
-  );
+  using (public.current_role_name() = 'consommateur');
 
 -- ---------------------------------------------------------------------
 -- 10. Policies : comments
@@ -188,7 +186,7 @@ create policy "photos_bucket_insert_authenticated"
   with check (bucket_id = 'photos');
 
 -- Suppression : uniquement le consommateur (cohérent avec la
--- suppression des lignes en base, réservée à ses propres photos).
+-- policy de suppression des lignes en base ci-dessus).
 create policy "photos_bucket_delete_consommateur_only"
   on storage.objects for delete
   to authenticated

@@ -140,7 +140,7 @@
               </div>
             </div>
             <button
-              v-if="role === 'consommateur' && photo.uploaded_by === 'consommateur'"
+              v-if="role === 'consommateur'"
               class="delete-photo-btn"
               @click="confirmDeletePhoto(photo)"
               aria-label="Supprimer la photo"
@@ -186,6 +186,14 @@
                 </div>
               </div>
             </div>
+            <button
+              v-if="role === 'consommateur'"
+              class="delete-photo-btn"
+              @click="confirmDeletePhoto(photo)"
+              aria-label="Supprimer la photo"
+            >
+              🗑️
+            </button>
           </div>
         </div>
         <p v-if="role === 'consommateur' && unrankedPhotos.length > 0" class="empty-hint">Glisse une photo vers "Classement" pour lui donner un rang.</p>

@@ -264,9 +264,14 @@ createApp({
           ghostClass: 'sortable-ghost',
           chosenClass: 'sortable-chosen',
           // Empêche le bouton de suppression de déclencher un
-          // glisser-déposer : un tap dessus reste un simple clic.
+          // glisser-déposer. `preventOnFilter: false` est indispensable :
+          // à `true` (valeur par défaut), SortableJS appelle
+          // preventDefault() sur le touchstart/mousedown de l'élément
+          // filtré, ce qui annule aussi l'événement "click" généré
+          // ensuite par le navigateur (surtout sur tactile) — le bouton
+          // semblait alors ne "rien faire" au clic.
           filter: '.delete-photo-btn',
-          preventOnFilter: true,
+          preventOnFilter: false,
           onEnd: () => this.syncPhotoOrderFromDom(),
         })
       );
@@ -277,6 +282,8 @@ createApp({
           animation: 150,
           ghostClass: 'sortable-ghost',
           chosenClass: 'sortable-chosen',
+          filter: '.delete-photo-btn',
+          preventOnFilter: false,
           onEnd: () => this.syncPhotoOrderFromDom(),
         })
       );
