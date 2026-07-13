@@ -89,11 +89,13 @@ sql/schema.sql                   Script SQL complet (tables, sécurité, stockag
 
 Tout est appliqué à deux niveaux : dans l'interface (boutons visibles ou non selon le rôle) et surtout dans la base de données via les policies RLS du fichier `sql/schema.sql`, qui sont la véritable barrière de sécurité.
 
-- **Consommateur** : ajoute des photos classées, réordonne le classement (glisser-déposer), évalue les propositions de l'acheteur, supprime ses propres photos, commente tout.
-- **Acheteur** : consulte tout (avec le produit préféré mis en avant), propose des photos (non classées, section "À évaluer"), commente tout, ne peut ni classer ni supprimer les photos du consommateur.
+- **Consommateur** : ajoute des photos classées, réordonne le classement (glisser-déposer), évalue les propositions de l'acheteur, supprime n'importe quelle photo (les siennes et celles de l'acheteur), commente tout.
+- **Acheteur** : consulte tout (avec le produit préféré mis en avant), propose des photos (non classées, section "À évaluer"), commente tout, ne peut ni classer ni supprimer aucune photo.
 
 ## Historique des ajustements post-lancement
 
 - Code PIN passé de 4 à 6 chiffres (Supabase impose 6 caractères minimum par défaut pour un mot de passe).
-- Bouton de suppression d'une photo transformé en icône poubelle rouge isolée à droite de chaque carte, pour éviter les clics accidentels (et exclue du glisser-déposer).
+- Bouton de suppression d'une photo transformé en icône poubelle rouge isolée à droite de chaque carte, pour éviter les clics accidentels.
 - Ajout de la GitHub Action anti-pause Supabase.
+- Correction du bouton poubelle : `preventOnFilter: true` de SortableJS annulait le clic tactile sur le bouton (car il appelle `preventDefault()` sur le touchstart, ce qui empêche le navigateur de générer le clic correspondant) — passé à `false`.
+- Le consommateur peut désormais supprimer aussi les photos proposées par l'acheteur, pas seulement les siennes (policy RLS `photos_delete_consommateur_only`).
