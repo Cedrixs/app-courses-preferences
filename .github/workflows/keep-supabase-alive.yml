@@ -1,0 +1,33 @@
+# =====================================================================
+# Empêche la mise en pause automatique du projet Supabase gratuit
+# (déclenchée après 7 jours sans aucune requête vers l'API).
+# =====================================================================
+# Ce workflow envoie une simple requête de lecture vers l'API Supabase
+# deux fois par semaine, ce qui suffit à compter comme de l'activité et
+# à garder le projet actif indéfiniment, même si personne n'utilise
+# l'application pendant plusieurs semaines.
+#
+# La clé utilisée ici est la clé "anon" publique du projet (la même
+# que dans js/config.js) : elle est conçue pour être exposée
+# publiquement, ce n'est pas un secret à protéger.
+
+name: Garder le projet Supabase actif
+
+on:
+  schedule:
+    # Tous les lundis et jeudis à 6h UTC (marge confortable sous les 7 jours).
+    - cron: '0 6 * * 1,4'
+  workflow_dispatch: {}
+
+jobs:
+  ping-supabase:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Requête de lecture vers l'API Supabase
+        run: |
+          curl -sf -o /dev/null -w "Statut HTTP : %{http_code}\n" \
+            "https://ghbqykqeupjcpkoockep.supabase.co/rest/v1/categories?select=id&limit=1" \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}"
+        env:
+          SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdoYnF5a3FldXBqY3Brb29ja2VwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM5MzkzNTYsImV4cCI6MjA5OTUxNTM1Nn0.FpUVOIOpHx4fTSL2gdQeM8n4WIVxeHwXe4h2p1p6moU
