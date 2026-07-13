@@ -28,7 +28,7 @@ const PIN_LENGTH = 6;
 createApp({
   data() {
     return {
-      view: 'loading', // loading | role-select | pin | categories | category-detail
+      view: 'loading', // loading | role-select | pin | categories | category-detail | shopping-list
       role: null,
       pendingRole: null,
       pinInput: '',
@@ -63,6 +63,15 @@ createApp({
 
       rankedSortable: null,
       unrankedSortable: null,
+
+      // Liste de courses
+      shoppingList: null,
+      shoppingListItems: [],
+      loadingShoppingList: false,
+      selectionMode: false, // true : un tap sur une photo l'ajoute à la liste au lieu d'ouvrir la visionneuse
+      showAddTextItemModal: false,
+      addTextItemCategoryId: null,
+      addTextItemLabel: '',
     };
   },
 
@@ -81,6 +90,9 @@ createApp({
     },
     canSubmitPhoto() {
       return !!this.addPhotoFile && !!this.addPhotoCategoryId && this.addPhotoProductName.trim().length > 0;
+    },
+    shoppingListPendingCount() {
+      return this.shoppingListItems.filter((item) => !item.taken).length;
     },
   },
 
@@ -183,6 +195,9 @@ createApp({
       this.currentCategory = null;
       this.allPhotos = [];
       this.destroySortables();
+      this.shoppingList = null;
+      this.shoppingListItems = [];
+      this.selectionMode = false;
       this.view = 'role-select';
     },
 
@@ -497,6 +512,161 @@ createApp({
     },
     closeLightbox() {
       this.lightboxPhoto = null;
+    },
+    // En mode sélection (consommateur en train de constituer sa liste
+    // de courses), un tap sur une photo l'ajoute à la liste au lieu
+    // d'ouvrir la visionneuse plein écran.
+    onPhotoThumbClick(photo) {
+      if (this.selectionMode && this.role === 'consommateur') {
+        this.addPhotoToList(photo);
+      } else {
+        this.openLightbox(photo);
+      }
+    },
+
+    // ---------------------------------------------------------------
+    // Liste de courses
+    // ---------------------------------------------------------------
+    async openShoppingList() {
+      this.selectionMode = false;
+      this.view = 'shopping-list';
+      await this.loadShoppingList();
+    },
+    async loadShoppingList() {
+      this.loadingShoppingList = true;
+      try {
+        let list = await api.fetchActiveList();
+        if (!list && this.role === 'consommateur') {
+          list = await api.createActiveList();
+        }
+        this.shoppingList = list;
+        this.shoppingListItems = list ? await api.fetchListItems(list.id) : [];
+      } catch (err) {
+        this.showError(err);
+      } finally {
+        this.loadingShoppingList = false;
+      }
+    },
+    enterSelectionMode() {
+      this.selectionMode = true;
+      this.view = 'categories';
+    },
+    exitSelectionMode() {
+      this.selectionMode = false;
+      this.openShoppingList();
+    },
+    // Cherche dans la liste chargée un article déjà présent et pas
+    // encore pris, pour incrémenter sa quantité plutôt que de créer un
+    // doublon. Un article déjà marqué "pris" ne compte pas : un
+    // nouveau clic redémarre une ligne fraîche (on veut probablement
+    // en racheter).
+    findActiveListItem({ photoId, label, categoryId }) {
+      return this.shoppingListItems.find((item) => {
+        if (item.taken) return false;
+        if (photoId) return item.photo_id === photoId;
+        return (
+          item.photo_id === null &&
+          item.category_id === categoryId &&
+          item.label.trim().toLowerCase() === label.trim().toLowerCase()
+        );
+      });
+    },
+    async addPhotoToList(photo) {
+      if (!this.shoppingList) return;
+      const existingItem = this.findActiveListItem({ photoId: photo.id });
+      try {
+        const saved = await api.addPhotoToList({
+          listId: this.shoppingList.id,
+          photo,
+          existingItem,
+        });
+        this.upsertLocalListItem(saved);
+        this.showSuccess(`"${photo.product_name}" ajouté à la liste.`);
+      } catch (err) {
+        this.showError(err);
+      }
+    },
+    openAddTextItemModal() {
+      this.addTextItemCategoryId = this.categories[0] && this.categories[0].id;
+      this.addTextItemLabel = '';
+      this.showAddTextItemModal = true;
+    },
+    async submitAddTextItem() {
+      const label = this.addTextItemLabel.trim();
+      if (!label || !this.addTextItemCategoryId || !this.shoppingList) return;
+      const existingItem = this.findActiveListItem({
+        label,
+        categoryId: this.addTextItemCategoryId,
+      });
+      try {
+        const saved = await api.addTextItemToList({
+          listId: this.shoppingList.id,
+          categoryId: this.addTextItemCategoryId,
+          label,
+          existingItem,
+        });
+        this.upsertLocalListItem(saved);
+        this.showSuccess(`"${label}" ajouté à la liste.`);
+        this.showAddTextItemModal = false;
+      } catch (err) {
+        this.showError(err);
+      }
+    },
+    upsertLocalListItem(saved) {
+      const index = this.shoppingListItems.findIndex((item) => item.id === saved.id);
+      if (index === -1) {
+        this.shoppingListItems.push(saved);
+      } else {
+        this.shoppingListItems.splice(index, 1, saved);
+      }
+    },
+    async incrementItem(item) {
+      try {
+        const saved = await api.incrementListItem(item);
+        this.upsertLocalListItem(saved);
+      } catch (err) {
+        this.showError(err);
+      }
+    },
+    async decrementItem(item) {
+      if (item.quantity <= 1) return;
+      try {
+        const saved = await api.decrementListItem(item);
+        this.upsertLocalListItem(saved);
+      } catch (err) {
+        this.showError(err);
+      }
+    },
+    async deleteListItem(item) {
+      if (!confirm(`Retirer "${item.label}" de la liste ?`)) return;
+      try {
+        await api.deleteListItem(item.id);
+        this.shoppingListItems = this.shoppingListItems.filter((i) => i.id !== item.id);
+      } catch (err) {
+        this.showError(err);
+      }
+    },
+    async toggleItemTaken(item) {
+      if (this.role !== 'acheteur') return;
+      try {
+        const saved = await api.toggleListItemTaken(item);
+        this.upsertLocalListItem(saved);
+      } catch (err) {
+        this.showError(err);
+      }
+    },
+    async confirmTerminerListe() {
+      if (!confirm('Terminer les courses ? La liste actuelle sera archivée et une nouvelle liste vide démarrera.')) {
+        return;
+      }
+      try {
+        const nouvelle = await api.terminerListeCourses();
+        this.shoppingList = nouvelle;
+        this.shoppingListItems = [];
+        this.showSuccess('Courses terminées, nouvelle liste prête.');
+      } catch (err) {
+        this.showError(err);
+      }
     },
   },
 }).mount('#app');

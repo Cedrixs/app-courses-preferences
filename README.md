@@ -15,6 +15,7 @@ Application (PWA) pour partager des préférences alimentaires entre un **consom
 - **`js/config.js`** : déjà rempli avec l'URL et la clé publique (anon) du projet.
 - **GitHub Pages** : activé sur la branche `main`, dossier `/ (root)`.
 - **Anti-pause Supabase** : une GitHub Action (`.github/workflows/keep-supabase-alive.yml`) ping l'API Supabase tous les lundis et jeudis pour empêcher la mise en pause automatique après 7 jours d'inactivité (voir section dédiée plus bas).
+- **Liste de courses** : tables et policies ajoutées via `sql/migration_liste_courses.sql`, exécuté une fois dans le SQL Editor de Supabase (déjà inclus dans `sql/schema.sql` pour une future installation complète).
 
 Tu n'as normalement plus rien à configurer. Les sections ci-dessous servent de mémo si tu dois un jour changer quelque chose (code PIN, catégories, redéploiement...).
 
@@ -56,6 +57,20 @@ python -m http.server 8080
 
 (ou tout autre serveur statique local équivalent, comme `npx serve`).
 
+## Liste de courses (fonctionnement)
+
+Un onglet **🛒 Liste** dans la navigation basse (à côté de **📂 Catégories**), pour les deux rôles.
+
+- **Une seule liste active à la fois** : dès qu'on ouvre l'onglet, la liste active se charge (ou se crée automatiquement si aucune n'existe, côté consommateur uniquement — contrainte imposée en base par un index unique partiel).
+- **Consommateur** :
+  - **📷 Ajouter depuis les catégories** : bascule l'écran des catégories en mode sélection (bandeau orange) ; chaque photo touchée est ajoutée à la liste (ou incrémentée de 1 si déjà présente et pas encore prise).
+  - **✏️ Ajouter un article texte** : pour un produit sans photo — nécessite de choisir une catégorie.
+  - Sur chaque article de la liste : boutons **−** / **+** pour la quantité (ne descend jamais sous 1 ; pour retirer complètement l'article, utiliser la poubelle) et un bouton poubelle dédié pour le retirer.
+  - **✅ Terminer les courses** : archive la liste actuelle et en recrée une nouvelle vide, en une seule opération atomique côté base (fonction `terminer_liste_courses()`).
+- **Acheteur** : liste en lecture texte (avec vignette photo si disponible, à toucher pour l'agrandir). Toucher le nom d'un article bascule son statut "pris" (texte barré). Pas de contrôle sur la quantité ni de suppression.
+- Le nombre d'articles non pris de la liste active s'affiche entre parenthèses à côté de l'onglet **Liste** dans la navigation basse.
+- Sécurité : les policies RLS empêchent l'acheteur de créer/modifier/supprimer une liste ou d'en changer le contenu (quantité, libellé...), et un trigger (`enforce_shopping_list_item_update`) empêche chaque rôle de modifier les colonnes réservées à l'autre (l'acheteur ne peut toucher qu'à `taken`/`taken_at`, le consommateur ne peut pas y toucher).
+
 ## Réexécuter le script SQL (si besoin un jour)
 
 `sql/schema.sql` est idempotent pour les tables/données (clauses `on conflict`), mais il **échouera sur la création des policies** si elles existent déjà — c'est normal et sans danger, les données existantes ne sont pas affectées. Si tu dois vraiment recréer les policies, supprime-les d'abord dans Supabase (Database > Policies) avant de relancer le script.
@@ -82,6 +97,7 @@ js/api.js                        Toutes les requêtes vers la base de données e
 js/app.js                        Application Vue 3 (état, navigation, glisser-déposer)
 icons/                           Icônes de la PWA
 sql/schema.sql                   Script SQL complet (tables, sécurité, stockage)
+sql/migration_liste_courses.sql  Migration ajoutant la liste de courses à un projet déjà en place
 .github/workflows/keep-supabase-alive.yml   Ping anti-pause Supabase (lundi/jeudi)
 ```
 
@@ -89,8 +105,8 @@ sql/schema.sql                   Script SQL complet (tables, sécurité, stockag
 
 Tout est appliqué à deux niveaux : dans l'interface (boutons visibles ou non selon le rôle) et surtout dans la base de données via les policies RLS du fichier `sql/schema.sql`, qui sont la véritable barrière de sécurité.
 
-- **Consommateur** : ajoute des photos classées, réordonne le classement (glisser-déposer), évalue les propositions de l'acheteur, supprime n'importe quelle photo (les siennes et celles de l'acheteur), commente tout.
-- **Acheteur** : consulte tout (avec le produit préféré mis en avant), propose des photos (non classées, section "À évaluer"), commente tout, ne peut ni classer ni supprimer aucune photo.
+- **Consommateur** : ajoute des photos classées, réordonne le classement (glisser-déposer), évalue les propositions de l'acheteur, supprime n'importe quelle photo (les siennes et celles de l'acheteur), commente tout. Côté liste de courses : seul rôle à pouvoir créer/remplir/vider la liste et la terminer.
+- **Acheteur** : consulte tout (avec le produit préféré mis en avant), propose des photos (non classées, section "À évaluer"), commente tout, ne peut ni classer ni supprimer aucune photo. Côté liste de courses : lecture seule + bascule "pris" sur chaque article.
 
 ## Historique des ajustements post-lancement
 
@@ -99,3 +115,4 @@ Tout est appliqué à deux niveaux : dans l'interface (boutons visibles ou non s
 - Ajout de la GitHub Action anti-pause Supabase.
 - Correction du bouton poubelle : `preventOnFilter: true` de SortableJS annulait le clic tactile sur le bouton (car il appelle `preventDefault()` sur le touchstart, ce qui empêche le navigateur de générer le clic correspondant) — passé à `false`.
 - Le consommateur peut désormais supprimer aussi les photos proposées par l'acheteur, pas seulement les siennes (policy RLS `photos_delete_consommateur_only`).
+- Ajout de la fonctionnalité **liste de courses** (branche `feature/liste-de-courses`) : nouvel onglet dans la navigation basse, ajout depuis les catégories ou en texte libre côté consommateur, consultation et pointage "pris" côté acheteur, archivage/nouvelle liste via `terminer_liste_courses()`.
