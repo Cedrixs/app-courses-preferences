@@ -4,7 +4,7 @@ Application (PWA) pour partager des préférences alimentaires entre un **consom
 
 - Frontend : HTML / CSS / JS, Vue 3 (via CDN, sans étape de build), déployé sur GitHub Pages.
 - Backend : Supabase (base de données Postgres, stockage de fichiers, authentification).
-- Connexion : écran "code PIN" à 4 chiffres, sans email ni mot de passe visible.
+- Connexion : écran "code PIN" à 6 chiffres, sans email ni mot de passe visible.
 
 Ce document explique comment finaliser la configuration. Il y a des étapes que **toi seul** peux faire (création de comptes), et d'autres que je peux faire pour toi si tu me le demandes (le push du code).
 
@@ -32,20 +32,18 @@ Si tu relances le script plus tard (par erreur), il ne dupliquera pas les catég
 
 ## 3. Créer les deux comptes utilisateurs (consommateur / acheteur)
 
-L'application n'affiche jamais d'email ni de mot de passe classique, mais elle s'appuie en interne sur deux comptes Supabase Auth avec un email technique fixe.
+L'application n'affiche jamais d'email ni de mot de passe classique, mais elle s'appuie en interne sur deux comptes Supabase Auth avec un email technique fixe. Le code PIN saisi à l'écran fait **6 chiffres** (c'est la longueur minimale par défaut d'un mot de passe Supabase, donc aucun réglage à changer côté Supabase).
 
-1. Dans Supabase, va dans **Authentication** > **Users**.
+1. Dans Supabase, va dans **Authentication** > **Users** (sous "Manage").
 2. Clique sur **Add user** > **Create new user**.
 3. Crée le premier compte :
    - Email : `consommateur@app.local`
-   - Password : `1234` (le code PIN du consommateur — voir section 6 pour le changer)
+   - Password : `123456` (le code PIN du consommateur — voir section 6 pour le changer)
    - Coche bien **Auto Confirm User** (sinon la connexion échouera, car il n'y a pas de vraie boîte mail pour confirmer le compte).
 4. Recommence pour le second compte :
    - Email : `acheteur@app.local`
-   - Password : `5678`
+   - Password : `654321`
    - Coche également **Auto Confirm User**.
-
-⚠️ Supabase exige un mot de passe d'au moins 6 caractères par défaut. Si tu veux un vrai code à 4 chiffres, va dans **Authentication** > **Providers** > **Email**, et réduis `Minimum password length` à `4` **avant** de créer les comptes (ou modifie-le après, puis remets à jour le mot de passe des 2 comptes déjà créés depuis l'onglet Users).
 
 ## 4. Récupérer l'URL et la clé publique du projet
 
@@ -69,7 +67,7 @@ const SUPABASE_CONFIG = {
 
 ## 6. Changer les codes PIN (recommandé)
 
-Les codes `1234` / `5678` définis à l'étape 3 sont temporaires. Pour les changer :
+Les codes `123456` / `654321` définis à l'étape 3 sont temporaires. Pour les changer :
 
 1. Dans Supabase, va dans **Authentication** > **Users**.
 2. Clique sur le compte concerné (`consommateur@app.local` ou `acheteur@app.local`).
@@ -143,6 +141,6 @@ Je ne peux pas créer de comptes à ta place (Supabase, GitHub) ni cliquer dans 
 3. **Créer les 2 comptes** `consommateur@app.local` et `acheteur@app.local` dans Supabase Auth, avec leurs codes PIN, en cochant "Auto Confirm User" (section 3).
 4. **Copier l'URL et la clé anon** de ton projet Supabase dans `js/config.js` (sections 4 et 5).
 5. **Activer GitHub Pages** sur le dépôt, une fois le code poussé (section 8).
-6. *(Optionnel mais recommandé)* Changer les codes PIN temporaires `1234` / `5678` (section 6).
+6. *(Optionnel mais recommandé)* Changer les codes PIN temporaires `123456` / `654321` (section 6).
 
 Une fois ces étapes faites, l'application est pleinement fonctionnelle, sans aucun autre entretien technique nécessaire.

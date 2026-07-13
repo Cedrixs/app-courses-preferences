@@ -44,10 +44,12 @@
     <button class="pin-back link-btn" @click="backToRoleSelect">&larr; Retour</button>
     <h2>{{ pendingRole === 'consommateur' ? '🍽️ Consommateur' : '🛒 Acheteur' }}</h2>
     <div class="pin-dots">
-      <div class="pin-dot" :class="{ filled: pinInput.length > 0 }"></div>
-      <div class="pin-dot" :class="{ filled: pinInput.length > 1 }"></div>
-      <div class="pin-dot" :class="{ filled: pinInput.length > 2 }"></div>
-      <div class="pin-dot" :class="{ filled: pinInput.length > 3 }"></div>
+      <div
+        class="pin-dot"
+        v-for="i in pinLength"
+        :key="i"
+        :class="{ filled: pinInput.length >= i }"
+      ></div>
     </div>
     <div class="pin-error">{{ pinError }}</div>
     <div class="pin-keypad">

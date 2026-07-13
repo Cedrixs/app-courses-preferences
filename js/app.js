@@ -19,6 +19,12 @@ const CATEGORY_ICONS = {
 
 const { createApp, markRaw } = Vue;
 
+// Longueur du code PIN. Doit rester cohérente avec le "Minimum password
+// length" configuré dans Supabase > Authentication > Sign In / Providers
+// > Email (6 chiffres = valeur par défaut de Supabase, aucun réglage à
+// changer côté Supabase).
+const PIN_LENGTH = 6;
+
 createApp({
   data() {
     return {
@@ -27,6 +33,7 @@ createApp({
       pendingRole: null,
       pinInput: '',
       pinError: '',
+      pinLength: PIN_LENGTH,
 
       categories: [],
       loadingCategories: false,
@@ -145,10 +152,10 @@ createApp({
       this.view = 'role-select';
     },
     pressPinKey(digit) {
-      if (this.pinInput.length >= 4) return;
+      if (this.pinInput.length >= PIN_LENGTH) return;
       this.pinInput += digit;
       this.pinError = '';
-      if (this.pinInput.length === 4) {
+      if (this.pinInput.length === PIN_LENGTH) {
         this.submitPin();
       }
     },
