@@ -122,13 +122,6 @@
                 <button class="link-btn" @click="toggleComments(photo)">
                   💬 {{ photo.comments.length }}
                 </button>
-                <button
-                  v-if="role === 'consommateur' && photo.uploaded_by === 'consommateur'"
-                  class="link-btn danger"
-                  @click="confirmDeletePhoto(photo)"
-                >
-                  Supprimer
-                </button>
               </div>
 
               <div v-if="openCommentsFor === photo.id" class="comments-box">
@@ -146,6 +139,14 @@
                 </div>
               </div>
             </div>
+            <button
+              v-if="role === 'consommateur' && photo.uploaded_by === 'consommateur'"
+              class="delete-photo-btn"
+              @click="confirmDeletePhoto(photo)"
+              aria-label="Supprimer la photo"
+            >
+              🗑️
+            </button>
           </div>
         </div>
 

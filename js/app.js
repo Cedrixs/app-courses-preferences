@@ -263,6 +263,10 @@ createApp({
           animation: 150,
           ghostClass: 'sortable-ghost',
           chosenClass: 'sortable-chosen',
+          // Empêche le bouton de suppression de déclencher un
+          // glisser-déposer : un tap dessus reste un simple clic.
+          filter: '.delete-photo-btn',
+          preventOnFilter: true,
           onEnd: () => this.syncPhotoOrderFromDom(),
         })
       );

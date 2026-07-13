@@ -453,6 +453,26 @@ img {
   color: var(--color-danger);
 }
 
+/* Bouton de suppression : isolé tout à droite de la carte, bien
+   visible et distinct du reste, pour éviter tout clic accidentel
+   en visant la photo ou les commentaires. */
+.delete-photo-btn {
+  flex-shrink: 0;
+  align-self: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: none;
+  background: var(--color-danger);
+  color: #fff;
+  font-size: 1.15rem;
+  box-shadow: 0 2px 6px rgba(194, 69, 47, 0.35);
+}
+
+.delete-photo-btn:active {
+  transform: scale(0.94);
+}
+
 .comments-box {
   margin-top: 10px;
   border-top: 1px solid var(--color-border);
