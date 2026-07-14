@@ -64,7 +64,7 @@
       <button class="pin-key" v-for="n in [1,2,3,4,5,6,7,8,9]" :key="n" @click="pressPinKey(String(n))">{{ n }}</button>
       <div class="pin-key empty"></div>
       <button class="pin-key" @click="pressPinKey('0')">0</button>
-      <button class="pin-key" @click="pressPinBackspace">⌫</button>
+      <button class="pin-key" @click="pressPinBackspace" aria-label="Effacer le dernier chiffre">⌫</button>
     </div>
   </div>
 
@@ -74,7 +74,7 @@
   <template v-if="view === 'categories' || view === 'category-detail' || view === 'shopping-list'">
 
     <div class="top-bar">
-      <button v-if="view === 'category-detail'" class="top-bar-btn" @click="goToCategories">&larr;</button>
+      <button v-if="view === 'category-detail'" class="top-bar-btn" @click="goToCategories" aria-label="Retour aux catégories">&larr;</button>
       <h1>
         <template v-if="view === 'category-detail' && currentCategory">{{ currentCategory.name }}</template>
         <template v-else-if="view === 'shopping-list'">Liste de courses</template>
@@ -109,7 +109,7 @@
         </button>
       </div>
 
-      <button class="fab" @click="openAddPhotoModal(null)">+</button>
+      <button class="fab" @click="openAddPhotoModal(null)" aria-label="Ajouter une photo">+</button>
     </div>
 
     <!-- ---------------- Vue : détail d'une catégorie ---------------- -->
@@ -127,7 +127,9 @@
             class="photo-card"
             :class="{ draggable: role === 'consommateur' }"
           >
-            <img class="photo-thumb" :src="photoUrl(photo)" @click="onPhotoThumbClick(photo)" alt="" />
+            <button type="button" class="thumb-btn" @click="onPhotoThumbClick(photo)" :aria-label="photoThumbLabel(photo)">
+              <img class="photo-thumb" :src="photoUrl(photo)" :alt="photo.product_name" />
+            </button>
             <div class="photo-info">
               <div class="photo-name-row">
                 <span class="photo-rank">{{ index + 1 }}</span>
@@ -177,7 +179,9 @@
             class="photo-card"
             :class="{ draggable: role === 'consommateur' }"
           >
-            <img class="photo-thumb" :src="photoUrl(photo)" @click="onPhotoThumbClick(photo)" alt="" />
+            <button type="button" class="thumb-btn" @click="onPhotoThumbClick(photo)" :aria-label="photoThumbLabel(photo)">
+              <img class="photo-thumb" :src="photoUrl(photo)" :alt="photo.product_name" />
+            </button>
             <div class="photo-info">
               <div class="photo-name-row">
                 <span class="photo-name">{{ photo.product_name }}</span>
@@ -216,7 +220,7 @@
         <p v-if="role === 'consommateur' && unrankedPhotos.length > 0" class="empty-hint">Glisse une photo vers "Classement" pour lui donner un rang.</p>
       </template>
 
-      <button class="fab" @click="openAddPhotoModal(currentCategory)">+</button>
+      <button class="fab" @click="openAddPhotoModal(currentCategory)" aria-label="Ajouter une photo">+</button>
     </div>
 
     <!-- ---------------- Vue : liste de courses ---------------- -->
@@ -240,20 +244,28 @@
               class="shopping-item"
               :class="{ taken: item.taken }"
             >
-              <img
+              <button
                 v-if="item.photos"
-                class="shopping-item-thumb"
-                :src="photoUrl(item.photos)"
-                @click="openLightbox(item.photos)"
-                alt=""
-              />
+                type="button"
+                class="thumb-btn"
+                @click="openLightbox({ ...item.photos, product_name: item.label })"
+                :aria-label="`Voir la photo de ${item.label} en grand`"
+              >
+                <img class="shopping-item-thumb" :src="photoUrl(item.photos)" :alt="item.label" />
+              </button>
               <div v-else class="shopping-item-thumb shopping-item-thumb-placeholder">📝</div>
 
-              <div
-                class="shopping-item-info"
-                :class="{ tappable: role === 'acheteur' }"
+              <button
+                v-if="role === 'acheteur'"
+                type="button"
+                class="shopping-item-info tappable"
                 @click="toggleItemTaken(item)"
+                :aria-pressed="item.taken"
               >
+                <span class="shopping-item-name">{{ item.label }}</span>
+                <span class="shopping-item-category">{{ item.categories ? item.categories.name : '' }}</span>
+              </button>
+              <div v-else class="shopping-item-info">
                 <div class="shopping-item-name">{{ item.label }}</div>
                 <div class="shopping-item-category">{{ item.categories ? item.categories.name : '' }}</div>
               </div>
@@ -292,10 +304,11 @@
     </div>
 
     <!-- ---------------- Navigation basse ---------------- -->
-    <div class="bottom-nav">
+    <nav class="bottom-nav" aria-label="Navigation principale">
       <button
         class="bottom-nav-btn"
         :class="{ active: view === 'categories' || view === 'category-detail' }"
+        :aria-current="(view === 'categories' || view === 'category-detail') ? 'page' : undefined"
         @click="goToCategories"
       >
         📂 Catégories
@@ -303,11 +316,12 @@
       <button
         class="bottom-nav-btn"
         :class="{ active: view === 'shopping-list' }"
+        :aria-current="view === 'shopping-list' ? 'page' : undefined"
         @click="openShoppingList"
       >
         🛒 Liste<span v-if="shoppingListPendingCount > 0"> ({{ shoppingListPendingCount }})</span>
       </button>
-    </div>
+    </nav>
   </template>
 
   <!-- =================================================================
@@ -315,12 +329,12 @@
        ================================================================= -->
   <div v-if="showAddPhotoModal" class="modal-overlay" @click.self="closeAddPhotoModal">
     <div class="modal-sheet">
-      <button class="modal-close" @click="closeAddPhotoModal">✕</button>
+      <button class="modal-close" @click="closeAddPhotoModal" aria-label="Fermer">✕</button>
       <h2>Ajouter une photo</h2>
 
       <div class="form-field">
-        <label>Catégorie</label>
-        <select v-model="addPhotoCategoryId">
+        <label for="add-photo-category">Catégorie</label>
+        <select id="add-photo-category" v-model="addPhotoCategoryId">
           <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
         </select>
       </div>
@@ -339,8 +353,8 @@
       <img v-if="addPhotoPreviewUrl" class="image-preview" :src="addPhotoPreviewUrl" alt="Aperçu" />
 
       <div class="form-field">
-        <label>Nom du produit</label>
-        <input type="text" v-model="addPhotoProductName" placeholder="Ex : Yaourt nature Danone" />
+        <label for="add-photo-product-name">Nom du produit</label>
+        <input id="add-photo-product-name" type="text" v-model="addPhotoProductName" placeholder="Ex : Yaourt nature Danone" />
       </div>
 
       <button class="primary-btn" :disabled="!canSubmitPhoto || uploading" @click="submitAddPhoto">
@@ -355,19 +369,20 @@
        ================================================================= -->
   <div v-if="showAddTextItemModal" class="modal-overlay" @click.self="showAddTextItemModal = false">
     <div class="modal-sheet">
-      <button class="modal-close" @click="showAddTextItemModal = false">✕</button>
+      <button class="modal-close" @click="showAddTextItemModal = false" aria-label="Fermer">✕</button>
       <h2>Ajouter un article texte</h2>
 
       <div class="form-field">
-        <label>Catégorie</label>
-        <select v-model="addTextItemCategoryId">
+        <label for="add-text-item-category">Catégorie</label>
+        <select id="add-text-item-category" v-model="addTextItemCategoryId">
           <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
         </select>
       </div>
 
       <div class="form-field">
-        <label>Nom de l'article</label>
+        <label for="add-text-item-label">Nom de l'article</label>
         <input
+          id="add-text-item-label"
           type="text"
           v-model="addTextItemLabel"
           placeholder="Ex : Papier toilette"
@@ -390,18 +405,20 @@
        ================================================================= -->
   <div v-if="showManageCategories" class="modal-overlay" @click.self="showManageCategories = false">
     <div class="modal-sheet">
-      <button class="modal-close" @click="showManageCategories = false">✕</button>
+      <button class="modal-close" @click="showManageCategories = false" aria-label="Fermer">✕</button>
       <h2>Gérer les catégories</h2>
 
       <div v-for="cat in categories" :key="cat.id" class="category-manage-row">
-        <input type="text" v-model="categoryEdits[cat.id]" />
-        <button class="icon-btn" @click="saveRenameCategory(cat)">💾</button>
-        <button class="icon-btn danger" @click="confirmDeleteCategory(cat)">🗑️</button>
+        <label class="sr-only" :for="'category-name-' + cat.id">Nom de la catégorie</label>
+        <input type="text" :id="'category-name-' + cat.id" v-model="categoryEdits[cat.id]" />
+        <button class="icon-btn" @click="saveRenameCategory(cat)" :aria-label="'Enregistrer le nom de ' + cat.name">💾</button>
+        <button class="icon-btn danger" @click="confirmDeleteCategory(cat)" :aria-label="'Supprimer la catégorie ' + cat.name">🗑️</button>
       </div>
 
       <div class="add-category-row">
-        <input type="text" v-model="newCategoryName" placeholder="Nouvelle catégorie…" @keyup.enter="submitAddCategory" />
-        <button class="icon-btn" @click="submitAddCategory">➕</button>
+        <label class="sr-only" for="new-category-name">Nouvelle catégorie</label>
+        <input type="text" id="new-category-name" v-model="newCategoryName" placeholder="Nouvelle catégorie…" @keyup.enter="submitAddCategory" />
+        <button class="icon-btn" @click="submitAddCategory" aria-label="Ajouter la catégorie">➕</button>
       </div>
     </div>
   </div>
@@ -410,8 +427,8 @@
        Lightbox (photo en plein écran)
        ================================================================= -->
   <div v-if="lightboxPhoto" class="lightbox" @click.self="closeLightbox">
-    <button class="lightbox-close" @click="closeLightbox">✕</button>
-    <img :src="photoUrl(lightboxPhoto)" alt="" />
+    <button class="lightbox-close" @click="closeLightbox" aria-label="Fermer l'aperçu">✕</button>
+    <img :src="photoUrl(lightboxPhoto)" :alt="lightboxPhoto.product_name" />
   </div>
 
 </div>

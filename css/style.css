@@ -127,6 +127,48 @@ img {
   display: none !important;
 }
 
+/* Masqué visuellement mais lu par les lecteurs d'écran (labels de
+   formulaire sans équivalent visuel, région live, etc.). */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Bouton-enveloppe autour d'une vignette photo cliquable (remplace un
+   <img @click>) : aucun style propre, se comporte comme l'image seule
+   qu'il remplace dans la mise en page. */
+.thumb-btn {
+  display: block;
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  line-height: 0;
+}
+
+/* Variante <button> de .shopping-item-info (rôle acheteur, bascule
+   "pris") : neutralise les styles natifs de bouton pour rendre un
+   résultat identique au <div> qu'elle remplace pour le consommateur. */
+button.shopping-item-info {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  color: inherit;
+  font: inherit;
+}
+
 /* =====================================================================
    Écran de sélection de rôle
    ===================================================================== */
@@ -915,12 +957,16 @@ img {
 }
 
 .shopping-item-name {
+  display: block; /* utilisé en <span> côté acheteur (bouton) : ces classes
+                      s'appuyaient jusqu'ici sur le display block par défaut
+                      des <div> pour s'empiler verticalement */
   font-weight: 600;
   font-size: 0.96rem;
   overflow-wrap: break-word;
 }
 
 .shopping-item-category {
+  display: block;
   font-size: 0.75rem;
   color: var(--color-text-muted);
   margin-top: 2px;

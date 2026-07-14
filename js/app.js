@@ -127,6 +127,15 @@ createApp({
     photoUrl(photo) {
       return api.getPublicUrl(photo.image_path);
     },
+    // Le clic sur une vignette a un effet différent selon le contexte
+    // (agrandir vs ajouter à la liste en mode sélection) : le libellé
+    // accessible doit refléter l'action réellement déclenchée par
+    // onPhotoThumbClick, pas toujours "voir la photo".
+    photoThumbLabel(photo) {
+      return this.selectionMode && this.role === 'consommateur'
+        ? `Ajouter ${photo.product_name} à la liste`
+        : `Voir la photo de ${photo.product_name} en grand`;
+    },
     showError(err) {
       console.error(err);
       this.errorMessage =

@@ -11,20 +11,10 @@ const liveRegion = document.createElement('div');
 liveRegion.id = 'live-region';
 liveRegion.setAttribute('role', 'status');
 liveRegion.setAttribute('aria-live', 'polite');
-// Masqué visuellement mais accessible aux lecteurs d'écran (pattern
-// "sr-only" standard : hors flux visuel, sans utiliser display:none qui
-// le rendrait invisible aussi pour l'API d'accessibilité).
-Object.assign(liveRegion.style, {
-  position: 'absolute',
-  width: '1px',
-  height: '1px',
-  padding: '0',
-  margin: '-1px',
-  overflow: 'hidden',
-  clip: 'rect(0, 0, 0, 0)',
-  whiteSpace: 'nowrap',
-  border: '0',
-});
+// Masqué visuellement mais accessible aux lecteurs d'écran (voir la
+// classe .sr-only dans css/style.css, sans display:none qui le
+// rendrait invisible aussi pour l'API d'accessibilité).
+liveRegion.className = 'sr-only';
 document.body.appendChild(liveRegion);
 
 let audioCtx = null;
