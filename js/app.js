@@ -25,6 +25,12 @@ const { createApp, markRaw } = Vue;
 // changer côté Supabase).
 const PIN_LENGTH = 6;
 
+// Applique l'état du mode confort visuel dès le chargement du script
+// (avant même le montage de Vue), rôle inconnu à ce stade : la valeur
+// par défaut par rôle sera ré-appliquée dans mounted() une fois la
+// session vérifiée.
+a11y.init(null);
+
 createApp({
   data() {
     return {
@@ -101,6 +107,7 @@ createApp({
       const currentRole = await getCurrentRole();
       if (currentRole) {
         this.role = currentRole;
+        a11y.init(this.role);
         await this.enterApp();
       } else {
         this.view = 'role-select';
@@ -127,6 +134,7 @@ createApp({
           ? this.translateError(err.message)
           : "Une erreur inattendue est survenue.";
       this.successMessage = '';
+      announce(this.errorMessage);
       setTimeout(() => {
         this.errorMessage = '';
       }, 5000);
@@ -134,6 +142,7 @@ createApp({
     showSuccess(text) {
       this.successMessage = text;
       this.errorMessage = '';
+      announce(text);
       setTimeout(() => {
         this.successMessage = '';
       }, 3000);
@@ -180,10 +189,15 @@ createApp({
       try {
         await loginWithPin(role, pin);
         this.role = role;
+        a11y.init(this.role);
+        announce('Code correct, connexion réussie.');
         await this.enterApp();
       } catch (err) {
         this.pinError = this.translateError(err.message || '');
         this.pinInput = '';
+        // Pas de vibration ici : évite de faire vibrer l'appareil à
+        // chaque chiffre du prochain essai si l'utilisateur retape vite.
+        announce(this.pinError, { vibrate: false });
       }
     },
     async doLogout() {
@@ -199,6 +213,7 @@ createApp({
       this.shoppingListItems = [];
       this.selectionMode = false;
       this.view = 'role-select';
+      a11y.init(null);
     },
 
     // ---------------------------------------------------------------
@@ -624,6 +639,7 @@ createApp({
       try {
         const saved = await api.incrementListItem(item);
         this.upsertLocalListItem(saved);
+        announce(`Quantité : ${saved.quantity} unité${saved.quantity > 1 ? 's' : ''}.`);
       } catch (err) {
         this.showError(err);
       }
@@ -633,6 +649,7 @@ createApp({
       try {
         const saved = await api.decrementListItem(item);
         this.upsertLocalListItem(saved);
+        announce(`Quantité : ${saved.quantity} unité${saved.quantity > 1 ? 's' : ''}.`);
       } catch (err) {
         this.showError(err);
       }
@@ -642,6 +659,7 @@ createApp({
       try {
         await api.deleteListItem(item.id);
         this.shoppingListItems = this.shoppingListItems.filter((i) => i.id !== item.id);
+        announce(`"${item.label}" retiré de la liste.`);
       } catch (err) {
         this.showError(err);
       }
