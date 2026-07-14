@@ -71,6 +71,20 @@ Un onglet **🛒 Liste** dans la navigation basse (à côté de **📂 Catégori
 - Le nombre d'articles non pris de la liste active s'affiche entre parenthèses à côté de l'onglet **Liste** dans la navigation basse.
 - Sécurité : les policies RLS empêchent l'acheteur de créer/modifier/supprimer une liste ou d'en changer le contenu (quantité, libellé...), et un trigger (`enforce_shopping_list_item_update`) empêche chaque rôle de modifier les colonnes réservées à l'autre (l'acheteur ne peut toucher qu'à `taken`/`taken_at`, le consommateur ne peut pas y toucher).
 
+## Mode confort visuel (accessibilité basse vision)
+
+Un mode d'affichage alternatif à contraste élevé, gros caractères et cibles tactiles larges (WCAG 2.2 AA), pensé pour le rôle consommateur.
+
+- **Activation** : toggle "Confort visuel" dans l'écran **⚙️ Réglages** (accessible depuis Catégories, consommateur uniquement), ou directement via le bouton **"👁️ Consommateur — mode confort"** en tête de l'écran de choix de rôle (force le mode ON même s'il avait été désactivé lors d'une session précédente).
+- **Réglages disponibles** (dans Réglages, visibles seulement quand le mode est ON) : taille du texte (Normal / Grand / Très grand), thème (Clair / Sombre), vibration et son de confirmation.
+- **Persistance** : `localStorage` (`a11yMode`, `a11yTheme`, `a11yTextSize`, `a11yVibrate`, `a11ySound`), synchronisé automatiquement entre onglets ouverts sur le même appareil.
+- **Écrans avec structure dédiée** : Catégories (grille 2 colonnes fixe, compteur de photos par catégorie), Détail catégorie (onglets "Classement"/"À évaluer" au lieu de sections empilées — un bouton "Classer cette photo" remplace le glisser-déposer entre les deux listes, impossible dès lors qu'elles ne sont jamais affichées ensemble), Liste de courses (stepper 88×88, état "pris" porté par 4 signaux redondants : fond, texte barré, pastille, label). Le reste de l'interface (écran PIN, les 3 modales, écrans de chargement/erreur/vide) hérite seulement de la police et des couleurs de base du mode confort, sans agrandissement dédié des cibles tactiles.
+- **Aucune régression** : tout est conditionné par l'attribut `data-a11y` posé sur `<html>` (voir `js/a11y.js`) ; à OFF (comportement par défaut pour le rôle acheteur), l'interface reste strictement celle d'origine.
+- **Confirmations** : `window.confirm()` a été remplacé par un composant maison (`role="alertdialog"`, piège de focus, CTA destructif explicite en rouge), utilisé pour toute action destructive (suppression photo/catégorie/article, terminer les courses) quel que soit le mode actif.
+- **Feedback multimodal** : chaque action clé (ajout, suppression, erreur, changement de quantité...) est annoncée aux lecteurs d'écran via une région `aria-live` permanente (voir `js/announce.js`), doublée d'une vibration courte et d'un bref son (Web Audio) — actif indépendamment du mode confort, pour les utilisateurs de lecteur d'écran.
+
+Fichiers ajoutés pour cette fonctionnalité : `js/a11y.js` (état persistant du mode/thème/taille/feedback), `js/announce.js` (annonces + vibration + son). Aucun changement sur `sql/schema.sql` ni `js/config.js`.
+
 ## Réexécuter le script SQL (si besoin un jour)
 
 `sql/schema.sql` est idempotent pour les tables/données (clauses `on conflict`), mais il **échouera sur la création des policies** si elles existent déjà — c'est normal et sans danger, les données existantes ne sont pas affectées. Si tu dois vraiment recréer les policies, supprime-les d'abord dans Supabase (Database > Policies) avant de relancer le script.
@@ -94,6 +108,8 @@ js/supabase-client.js            Initialisation du client Supabase
 js/auth.js                       Connexion par code PIN
 js/image-utils.js                Compression des photos avant envoi
 js/api.js                        Toutes les requêtes vers la base de données et le stockage
+js/a11y.js                       État persistant du mode confort visuel (localStorage + attributs data-*)
+js/announce.js                   Annonces multimodales (aria-live + vibration + son)
 js/app.js                        Application Vue 3 (état, navigation, glisser-déposer)
 icons/                           Icônes de la PWA
 sql/schema.sql                   Script SQL complet (tables, sécurité, stockage)
@@ -116,3 +132,4 @@ Tout est appliqué à deux niveaux : dans l'interface (boutons visibles ou non s
 - Correction du bouton poubelle : `preventOnFilter: true` de SortableJS annulait le clic tactile sur le bouton (car il appelle `preventDefault()` sur le touchstart, ce qui empêche le navigateur de générer le clic correspondant) — passé à `false`.
 - Le consommateur peut désormais supprimer aussi les photos proposées par l'acheteur, pas seulement les siennes (policy RLS `photos_delete_consommateur_only`).
 - Ajout de la fonctionnalité **liste de courses** (branche `feature/liste-de-courses`) : nouvel onglet dans la navigation basse, ajout depuis les catégories ou en texte libre côté consommateur, consultation et pointage "pris" côté acheteur, archivage/nouvelle liste via `terminer_liste_courses()`.
+- Ajout du **mode confort visuel** (accessibilité basse vision, voir section dédiée plus haut) : refactor sémantique de l'interface existante (boutons natifs, labels reliés, `aria-label`/`aria-current`), variantes d'écran à contraste élevé pour Catégories/Détail catégorie/Liste de courses, remplacement de `window.confirm()` par un composant `ConfirmSheet` accessible, écran Réglages et entrée rapide depuis le choix de rôle.
