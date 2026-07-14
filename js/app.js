@@ -78,6 +78,14 @@ createApp({
       showAddTextItemModal: false,
       addTextItemCategoryId: null,
       addTextItemLabel: '',
+
+      // Mode confort visuel : miroir réactif de l'attribut data-a11y
+      // (posé par js/a11y.js sur <html>), pour piloter les v-if des
+      // variantes d'écran. a11yActiveTab pilote l'onglet visible du
+      // détail de catégorie en mode confort (les deux listes ne sont
+      // jamais affichées en même temps, contrairement au mode standard).
+      a11yOn: a11y.isOn(),
+      a11yActiveTab: 'ranked', // 'ranked' | 'unranked'
     };
   },
 
@@ -103,11 +111,21 @@ createApp({
   },
 
   async mounted() {
+    // Synchronise le drapeau réactif a11yOn si le mode confort change
+    // dans un autre onglet (js/a11y.js met déjà à jour l'attribut DOM ;
+    // ici on met à jour l'état Vue qui pilote les v-if des templates).
+    window.addEventListener('storage', (event) => {
+      if (event.key === 'a11yMode') {
+        this.a11yOn = a11y.isOn();
+      }
+    });
+
     try {
       const currentRole = await getCurrentRole();
       if (currentRole) {
         this.role = currentRole;
         a11y.init(this.role);
+        this.a11yOn = a11y.isOn();
         await this.enterApp();
       } else {
         this.view = 'role-select';
@@ -199,6 +217,7 @@ createApp({
         await loginWithPin(role, pin);
         this.role = role;
         a11y.init(this.role);
+        this.a11yOn = a11y.isOn();
         announce('Code correct, connexion réussie.');
         await this.enterApp();
       } catch (err) {
@@ -223,6 +242,7 @@ createApp({
       this.selectionMode = false;
       this.view = 'role-select';
       a11y.init(null);
+      this.a11yOn = a11y.isOn();
     },
 
     // ---------------------------------------------------------------
@@ -250,7 +270,18 @@ createApp({
       this.currentCategory = category;
       this.view = 'category-detail';
       this.openCommentsFor = null;
+      this.a11yActiveTab = 'ranked';
       await this.loadPhotos();
+    },
+    // Changement d'onglet en mode confort (Classement / À évaluer) : les
+    // deux listes ne sont jamais dans le DOM en même temps (v-if), donc
+    // SortableJS doit être détruit puis ré-initialisé sur le nouvel
+    // onglet visible.
+    setA11yTab(tab) {
+      if (this.a11yActiveTab === tab) return;
+      this.a11yActiveTab = tab;
+      this.destroySortables();
+      this.$nextTick(() => this.initSortables());
     },
     goToCategories() {
       this.destroySortables();
@@ -283,6 +314,29 @@ createApp({
     initSortables() {
       if (this.role !== 'consommateur') return;
       if (this.view !== 'category-detail') return;
+
+      if (this.a11yOn) {
+        // Mode confort : Classement et À évaluer sont des onglets, jamais
+        // affichés simultanément (v-if) — impossible de glisser une photo
+        // de l'un vers l'autre. Seul le classement reste réordonnable par
+        // glisser-déposer (liste unique) ; passer une photo de "À évaluer"
+        // au classement se fait via le bouton "Classer cette photo"
+        // (rankPhotoFromUnranked), pas par glisser-déposer.
+        if (this.a11yActiveTab !== 'ranked') return;
+        const rankedEl = this.$refs.rankedList;
+        if (!rankedEl) return;
+        this.rankedSortable = markRaw(
+          Sortable.create(rankedEl, {
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            chosenClass: 'sortable-chosen',
+            filter: '.delete-photo-btn',
+            preventOnFilter: false,
+            onEnd: () => this.syncPhotoOrderFromDom(),
+          })
+        );
+        return;
+      }
 
       const rankedEl = this.$refs.rankedList;
       const unrankedEl = this.$refs.unrankedList;
@@ -346,12 +400,12 @@ createApp({
     // déjà à ce qui est affiché).
     async syncPhotoOrderFromDom() {
       const rankedEl = this.$refs.rankedList;
+      if (!rankedEl) return;
+      // Absent en mode confort (onglets) : les deux listes ne sont
+      // jamais dans le DOM en même temps, voir initSortables().
       const unrankedEl = this.$refs.unrankedList;
-      if (!rankedEl || !unrankedEl) return;
 
       const rankedIds = Array.from(rankedEl.children).map((el) => el.dataset.id);
-      const unrankedIds = Array.from(unrankedEl.children).map((el) => el.dataset.id);
-
       const byId = new Map(this.allPhotos.map((p) => [p.id, p]));
 
       const updates = [];
@@ -364,12 +418,15 @@ createApp({
           updates.push({ id: photo.id, priority_rank: newRank });
         }
       });
-      unrankedIds.forEach((id) => {
-        const photo = byId.get(id);
-        if (photo && photo.priority_rank !== null) {
-          photo.priority_rank = null;
-        }
-      });
+      if (unrankedEl) {
+        const unrankedIds = Array.from(unrankedEl.children).map((el) => el.dataset.id);
+        unrankedIds.forEach((id) => {
+          const photo = byId.get(id);
+          if (photo && photo.priority_rank !== null) {
+            photo.priority_rank = null;
+          }
+        });
+      }
 
       // Force Vue à recalculer rankedPhotos/unrankedPhotos.
       this.allPhotos = this.allPhotos.slice();
@@ -380,6 +437,21 @@ createApp({
       } catch (err) {
         this.showError(err);
         await this.loadPhotos(); // Recharge l'état réel en cas d'échec de sauvegarde.
+      }
+    },
+    // Mode confort uniquement : équivalent bouton du glisser-déposer
+    // "À évaluer" → "Classement" (impossible entre deux onglets), classe
+    // la photo en dernière position du classement.
+    async rankPhotoFromUnranked(photo) {
+      try {
+        const maxRank = await api.fetchMaxRank(this.currentCategory.id);
+        const newRank = maxRank + 1;
+        await api.updatePhotoRanks([{ id: photo.id, priority_rank: newRank }]);
+        photo.priority_rank = newRank;
+        this.allPhotos = this.allPhotos.slice();
+        announce(`${photo.product_name} ajouté au classement.`);
+      } catch (err) {
+        this.showError(err);
       }
     },
 
@@ -432,6 +504,9 @@ createApp({
 
         this.showSuccess('Photo ajoutée !');
 
+        const category = this.categories.find((c) => c.id === this.addPhotoCategoryId);
+        if (category) category.photo_count = (category.photo_count || 0) + 1;
+
         // Si on est déjà dans la catégorie concernée, on rafraîchit la liste.
         if (this.currentCategory && this.currentCategory.id === this.addPhotoCategoryId) {
           await this.loadPhotos();
@@ -458,6 +533,8 @@ createApp({
       try {
         await api.deletePhoto(photo);
         this.allPhotos = this.allPhotos.filter((p) => p.id !== photo.id);
+        const category = this.categories.find((c) => c.id === photo.category_id);
+        if (category) category.photo_count = Math.max(0, (category.photo_count || 0) - 1);
         this.showSuccess('Photo supprimée.');
       } catch (err) {
         this.showError(err);
@@ -519,6 +596,7 @@ createApp({
       if (!name) return;
       try {
         const category = await api.addCategory(name);
+        category.photo_count = 0; // categories.insert() ne renvoie pas l'agrégat photos(count)
         this.categories.push(category);
         this.categoryEdits[category.id] = category.name;
         this.newCategoryName = '';

@@ -92,8 +92,28 @@
     <div v-if="errorMessage" class="banner error">{{ errorMessage }}</div>
     <div v-if="successMessage" class="banner success">{{ successMessage }}</div>
 
+    <!-- ---------------- Vue : liste des catégories (mode confort) ---------------- -->
+    <div v-if="view === 'categories' && a11yOn" class="view">
+      <button type="button" class="a11y-manage-btn" @click="openManageCategories">⚙️ Gérer les catégories</button>
+
+      <p v-if="loadingCategories" class="empty-hint" role="status">Chargement des catégories…</p>
+      <ul v-else class="a11y-category-grid" role="list">
+        <li v-for="cat in categories" :key="cat.id">
+          <button type="button" class="a11y-category-card" @click="openCategory(cat)">
+            <span class="a11y-category-icon" aria-hidden="true">{{ categoryIcon(cat.name) }}</span>
+            <span class="a11y-category-name">{{ cat.name }}</span>
+            <span class="a11y-category-count">{{ cat.photo_count }} photo{{ cat.photo_count !== 1 ? 's' : '' }}</span>
+          </button>
+        </li>
+      </ul>
+
+      <button type="button" class="a11y-primary-btn" @click="openAddPhotoModal(null)">
+        <span aria-hidden="true">+</span> Ajouter une photo
+      </button>
+    </div>
+
     <!-- ---------------- Vue : liste des catégories ---------------- -->
-    <div v-if="view === 'categories'" class="view">
+    <div v-if="view === 'categories' && !a11yOn" class="view">
       <button class="top-bar-btn" style="margin-bottom:14px;background:#e2e1da;color:#22271f" @click="openManageCategories">⚙️ Gérer les catégories</button>
 
       <div v-if="loadingCategories" class="empty-hint">Chargement des catégories…</div>
@@ -112,8 +132,158 @@
       <button class="fab" @click="openAddPhotoModal(null)" aria-label="Ajouter une photo">+</button>
     </div>
 
+    <!-- ---------------- Vue : détail d'une catégorie (mode confort) ---------------- -->
+    <div v-if="view === 'category-detail' && a11yOn" class="view">
+      <p v-if="loadingPhotos" class="empty-hint" role="status">Chargement des photos…</p>
+
+      <template v-else>
+        <div class="a11y-tablist" role="tablist" aria-label="Filtrer les photos">
+          <button
+            id="a11y-tab-ranked"
+            type="button"
+            role="tab"
+            class="a11y-tab"
+            :class="{ active: a11yActiveTab === 'ranked' }"
+            :aria-selected="a11yActiveTab === 'ranked'"
+            aria-controls="a11y-tabpanel-ranked"
+            @click="setA11yTab('ranked')"
+          >
+            <span aria-hidden="true">★</span> Classement <span class="a11y-tab-count">{{ rankedPhotos.length }}</span>
+          </button>
+          <button
+            id="a11y-tab-unranked"
+            type="button"
+            role="tab"
+            class="a11y-tab"
+            :class="{ active: a11yActiveTab === 'unranked' }"
+            :aria-selected="a11yActiveTab === 'unranked'"
+            aria-controls="a11y-tabpanel-unranked"
+            @click="setA11yTab('unranked')"
+          >
+            <span aria-hidden="true">◇</span> À évaluer <span class="a11y-tab-count">{{ unrankedPhotos.length }}</span>
+          </button>
+        </div>
+
+        <div
+          v-if="a11yActiveTab === 'ranked'"
+          id="a11y-tabpanel-ranked"
+          role="tabpanel"
+          aria-labelledby="a11y-tab-ranked"
+        >
+          <p v-if="rankedPhotos.length === 0" class="empty-hint">Aucune photo classée pour le moment.</p>
+          <ul v-else ref="rankedList" class="a11y-photo-list" role="list">
+            <li
+              v-for="(photo, index) in rankedPhotos"
+              :key="photo.id"
+              :data-id="photo.id"
+              class="a11y-photo-card"
+              :class="{ draggable: role === 'consommateur' }"
+            >
+              <button type="button" class="a11y-thumb-btn" @click="onPhotoThumbClick(photo)" :aria-label="photoThumbLabel(photo)">
+                <img class="a11y-photo-thumb" :src="photoUrl(photo)" :alt="photo.product_name" />
+                <span class="a11y-photo-rank" aria-hidden="true">{{ index + 1 }}</span>
+              </button>
+              <div class="a11y-photo-info">
+                <p class="a11y-photo-name">
+                  {{ photo.product_name }}
+                  <span v-if="index === 0" class="a11y-badge-preferred">★ Préféré</span>
+                </p>
+                <p class="a11y-photo-author">Ajouté par {{ photo.uploaded_by }}</p>
+                <button type="button" class="a11y-link-btn" @click="toggleComments(photo)">
+                  💬 {{ photo.comments.length }} commentaire{{ photo.comments.length !== 1 ? 's' : '' }}
+                </button>
+                <div v-if="openCommentsFor === photo.id" class="comments-box">
+                  <div v-for="c in photo.comments" :key="c.id" class="comment-item">
+                    <span class="comment-author">{{ c.author }} :</span> {{ c.text }}
+                  </div>
+                  <div class="comment-form">
+                    <label class="sr-only" :for="'a11y-comment-' + photo.id">Ajouter un commentaire pour {{ photo.product_name }}</label>
+                    <input
+                      :id="'a11y-comment-' + photo.id"
+                      type="text"
+                      v-model="newCommentDrafts[photo.id]"
+                      placeholder="Ajouter un commentaire…"
+                      @keyup.enter="submitComment(photo)"
+                    />
+                    <button @click="submitComment(photo)">Envoyer</button>
+                  </div>
+                </div>
+              </div>
+              <button
+                v-if="role === 'consommateur'"
+                class="a11y-delete-btn"
+                @click="confirmDeletePhoto(photo)"
+                aria-label="Supprimer la photo"
+              >
+                🗑️
+              </button>
+            </li>
+          </ul>
+        </div>
+
+        <div
+          v-if="a11yActiveTab === 'unranked'"
+          id="a11y-tabpanel-unranked"
+          role="tabpanel"
+          aria-labelledby="a11y-tab-unranked"
+        >
+          <p v-if="unrankedPhotos.length === 0" class="empty-hint">Aucune photo à évaluer pour le moment.</p>
+          <ul v-else class="a11y-photo-list" role="list">
+            <li v-for="photo in unrankedPhotos" :key="photo.id" class="a11y-photo-card">
+              <button type="button" class="a11y-thumb-btn" @click="onPhotoThumbClick(photo)" :aria-label="photoThumbLabel(photo)">
+                <img class="a11y-photo-thumb" :src="photoUrl(photo)" :alt="photo.product_name" />
+              </button>
+              <div class="a11y-photo-info">
+                <p class="a11y-photo-name">{{ photo.product_name }}</p>
+                <p class="a11y-photo-author">Proposé par {{ photo.uploaded_by }}</p>
+                <button type="button" class="a11y-link-btn" @click="toggleComments(photo)">
+                  💬 {{ photo.comments.length }} commentaire{{ photo.comments.length !== 1 ? 's' : '' }}
+                </button>
+                <div v-if="openCommentsFor === photo.id" class="comments-box">
+                  <div v-for="c in photo.comments" :key="c.id" class="comment-item">
+                    <span class="comment-author">{{ c.author }} :</span> {{ c.text }}
+                  </div>
+                  <div class="comment-form">
+                    <label class="sr-only" :for="'a11y-comment-u-' + photo.id">Ajouter un commentaire pour {{ photo.product_name }}</label>
+                    <input
+                      :id="'a11y-comment-u-' + photo.id"
+                      type="text"
+                      v-model="newCommentDrafts[photo.id]"
+                      placeholder="Ajouter un commentaire…"
+                      @keyup.enter="submitComment(photo)"
+                    />
+                    <button @click="submitComment(photo)">Envoyer</button>
+                  </div>
+                </div>
+                <button
+                  v-if="role === 'consommateur'"
+                  type="button"
+                  class="a11y-secondary-btn"
+                  @click="rankPhotoFromUnranked(photo)"
+                >
+                  ★ Classer cette photo
+                </button>
+              </div>
+              <button
+                v-if="role === 'consommateur'"
+                class="a11y-delete-btn"
+                @click="confirmDeletePhoto(photo)"
+                aria-label="Supprimer la photo"
+              >
+                🗑️
+              </button>
+            </li>
+          </ul>
+        </div>
+      </template>
+
+      <button type="button" class="a11y-primary-btn" @click="openAddPhotoModal(currentCategory)">
+        <span aria-hidden="true">+</span> Ajouter une photo
+      </button>
+    </div>
+
     <!-- ---------------- Vue : détail d'une catégorie ---------------- -->
-    <div v-if="view === 'category-detail'" class="view">
+    <div v-if="view === 'category-detail' && !a11yOn" class="view">
       <div v-if="loadingPhotos" class="empty-hint">Chargement des photos…</div>
 
       <template v-else>
@@ -223,8 +393,96 @@
       <button class="fab" @click="openAddPhotoModal(currentCategory)" aria-label="Ajouter une photo">+</button>
     </div>
 
+    <!-- ---------------- Vue : liste de courses (mode confort) ---------------- -->
+    <div v-if="view === 'shopping-list' && a11yOn" class="view">
+      <p v-if="loadingShoppingList" class="empty-hint" role="status">Chargement de la liste…</p>
+
+      <template v-else>
+        <p v-if="!shoppingList" class="empty-hint">
+          Le consommateur n'a pas encore créé de liste de courses.
+        </p>
+
+        <template v-else>
+          <p v-if="shoppingListItems.length === 0" class="empty-hint">
+            La liste est vide pour le moment.
+          </p>
+
+          <ul class="a11y-shopping-list" role="list">
+            <li
+              v-for="item in shoppingListItems"
+              :key="item.id"
+              class="a11y-shopping-item"
+              :class="{ taken: item.taken }"
+            >
+              <button
+                v-if="item.photos"
+                type="button"
+                class="a11y-thumb-btn"
+                @click="openLightbox({ ...item.photos, product_name: item.label })"
+                :aria-label="`Voir la photo de ${item.label} en grand`"
+              >
+                <img class="a11y-shopping-item-thumb" :src="photoUrl(item.photos)" :alt="item.label" />
+                <span v-if="item.taken" class="a11y-taken-overlay" aria-hidden="true">✓</span>
+              </button>
+              <div v-else class="a11y-shopping-item-thumb a11y-shopping-item-thumb-placeholder" aria-hidden="true">📝</div>
+
+              <button
+                v-if="role === 'acheteur'"
+                type="button"
+                class="a11y-shopping-item-info"
+                @click="toggleItemTaken(item)"
+                :aria-pressed="item.taken"
+              >
+                <span class="a11y-shopping-item-name">
+                  {{ item.label }}
+                  <span v-if="item.taken" class="a11y-badge-taken">PRIS</span>
+                </span>
+                <span class="a11y-shopping-item-category">{{ item.categories ? item.categories.name : '' }}</span>
+              </button>
+              <div v-else class="a11y-shopping-item-info">
+                <p class="a11y-shopping-item-name">
+                  {{ item.label }}
+                  <span v-if="item.taken" class="a11y-badge-taken">PRIS</span>
+                </p>
+                <p class="a11y-shopping-item-category">{{ item.categories ? item.categories.name : '' }}</p>
+              </div>
+
+              <div class="a11y-stepper" v-if="role === 'consommateur'">
+                <button type="button" class="a11y-stepper-btn" :disabled="item.quantity <= 1" @click="decrementItem(item)" aria-label="Diminuer la quantité">−</button>
+                <output class="a11y-stepper-value">{{ item.quantity }} unité{{ item.quantity !== 1 ? 's' : '' }}</output>
+                <button type="button" class="a11y-stepper-btn" @click="incrementItem(item)" aria-label="Augmenter la quantité">+</button>
+              </div>
+              <p class="a11y-shopping-item-qty-readonly" v-else>× {{ item.quantity }}</p>
+
+              <button
+                v-if="role === 'consommateur'"
+                class="a11y-delete-btn"
+                @click="deleteListItem(item)"
+                aria-label="Retirer de la liste"
+              >
+                🗑️
+              </button>
+            </li>
+          </ul>
+
+          <template v-if="role === 'consommateur'">
+            <button type="button" class="a11y-secondary-btn" @click="enterSelectionMode">📷 Ajouter depuis les catégories</button>
+            <button type="button" class="a11y-secondary-btn" @click="openAddTextItemModal">✏️ Ajouter un article texte</button>
+            <button
+              v-if="shoppingListItems.length > 0"
+              type="button"
+              class="a11y-primary-btn a11y-danger-btn"
+              @click="confirmTerminerListe"
+            >
+              ✅ Terminer les courses
+            </button>
+          </template>
+        </template>
+      </template>
+    </div>
+
     <!-- ---------------- Vue : liste de courses ---------------- -->
-    <div v-if="view === 'shopping-list'" class="view">
+    <div v-if="view === 'shopping-list' && !a11yOn" class="view">
       <div v-if="loadingShoppingList" class="empty-hint">Chargement de la liste…</div>
 
       <template v-else>

@@ -16,7 +16,13 @@ const api = {
   // Catégories
   // ---------------------------------------------------------------
   async fetchCategories() {
-    return unwrap(await supabaseClient.from('categories').select('*').order('name'));
+    // `photos(count)` embarque le nombre de photos de chaque catégorie
+    // (relation photos.category_id -> categories.id) : utilisé par le
+    // mode confort visuel pour afficher "12 photos" sous chaque carte.
+    const rows = unwrap(
+      await supabaseClient.from('categories').select('*, photos(count)').order('name')
+    );
+    return rows.map((c) => ({ ...c, photo_count: c.photos?.[0]?.count ?? 0 }));
   },
 
   async addCategory(name) {

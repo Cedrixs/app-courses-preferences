@@ -1013,3 +1013,469 @@ button.shopping-item-info {
   color: #fff;
   box-shadow: none;
 }
+
+/* =====================================================================
+   Mode confort visuel — chrome partagé (pas de changement de structure,
+   juste un réhabillage CSS : top-bar, nav basse, bandeaux d'état)
+   ===================================================================== */
+:root[data-a11y="on"] body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+}
+
+:root[data-a11y="on"] .top-bar {
+  background: var(--ink);
+  color: var(--bg);
+  min-height: var(--tap-comfort);
+}
+
+:root[data-a11y="on"] .top-bar h1 {
+  font-size: var(--fs-title);
+}
+
+:root[data-a11y="on"] .top-bar-btn {
+  min-height: var(--tap-min);
+  min-width: var(--tap-min);
+  background: transparent;
+  border: 2px solid var(--bg);
+  border-radius: var(--a11y-radius);
+  font-size: 1rem;
+}
+
+:root[data-a11y="on"] .role-badge {
+  border: 1px solid var(--bg);
+  border-radius: var(--a11y-radius);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+}
+
+:root[data-a11y="on"] .bottom-nav {
+  background: var(--surface-2);
+  border-top: var(--border);
+}
+
+:root[data-a11y="on"] .bottom-nav-btn {
+  min-height: var(--tap-comfort);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 1rem;
+}
+
+:root[data-a11y="on"] .bottom-nav-btn.active {
+  color: var(--action);
+  font-weight: 700;
+}
+
+:root[data-a11y="on"] .banner {
+  border: var(--border);
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+}
+
+:root[data-a11y="on"] .banner.error {
+  background: var(--surface-2);
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+:root[data-a11y="on"] .banner.success {
+  background: var(--surface-2);
+  color: var(--action);
+  border-color: var(--action);
+}
+
+/* =====================================================================
+   Mode confort visuel — Catégories (grille 2 colonnes fixe, bouton
+   "Ajouter une photo" pleine largeur au lieu du FAB)
+   ===================================================================== */
+:root[data-a11y="on"] .a11y-manage-btn {
+  display: block;
+  width: 100%;
+  min-height: var(--tap-min);
+  margin-bottom: var(--gap-3);
+  padding: 0 var(--gap-2);
+  background: var(--surface-2);
+  color: var(--ink);
+  border: var(--border);
+  border-radius: var(--a11y-radius);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+:root[data-a11y="on"] .a11y-category-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--gap-3);
+}
+
+:root[data-a11y="on"] .a11y-category-card {
+  width: 100%;
+  min-height: var(--tap-large);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--gap-1);
+  padding: var(--gap-3) var(--gap-2);
+  background: var(--surface-2);
+  color: var(--ink);
+  border: var(--border);
+  border-radius: var(--a11y-radius);
+  font-family: var(--font-body);
+  text-align: center;
+}
+
+:root[data-a11y="on"] .a11y-category-icon {
+  font-size: 2.4rem;
+}
+
+:root[data-a11y="on"] .a11y-category-name {
+  font-size: var(--fs-title);
+  font-weight: 700;
+}
+
+:root[data-a11y="on"] .a11y-category-count {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--ink-2);
+}
+
+:root[data-a11y="on"] .a11y-primary-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--gap-1);
+  width: 100%;
+  min-height: var(--tap-comfort);
+  margin-top: var(--gap-3);
+  padding: 0 var(--gap-2);
+  background: var(--action);
+  color: var(--bg);
+  border: none;
+  border-radius: var(--a11y-radius);
+  font-family: var(--font-body);
+  font-size: var(--fs-title);
+  font-weight: 700;
+}
+
+:root[data-a11y="on"] .a11y-secondary-btn {
+  display: block;
+  width: 100%;
+  min-height: var(--tap-comfort);
+  margin-top: var(--gap-2);
+  padding: 0 var(--gap-2);
+  background: var(--surface-2);
+  color: var(--ink);
+  border: var(--border);
+  border-radius: var(--a11y-radius);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+:root[data-a11y="on"] .a11y-danger-btn {
+  background: var(--danger);
+  color: var(--bg);
+  border: none;
+}
+
+/* =====================================================================
+   Mode confort visuel — Détail catégorie (onglets Classement/À évaluer
+   au lieu de sections empilées ; rang en pastille sur la photo)
+   ===================================================================== */
+:root[data-a11y="on"] .a11y-tablist {
+  display: flex;
+  border-bottom: var(--border);
+  margin-bottom: var(--gap-3);
+}
+
+:root[data-a11y="on"] .a11y-tab {
+  flex: 1;
+  min-height: var(--tap-comfort);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--gap-1);
+  background: var(--surface-2);
+  color: var(--ink);
+  border: var(--border);
+  border-bottom: none;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+:root[data-a11y="on"] .a11y-tab.active {
+  background: var(--bg);
+  font-weight: 700;
+  box-shadow: inset 0 -4px 0 var(--action);
+}
+
+:root[data-a11y="on"] .a11y-tab-count {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+}
+
+:root[data-a11y="on"] .a11y-photo-list {
+  list-style: none;
+  margin: 0 0 var(--gap-3);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-2);
+}
+
+:root[data-a11y="on"] .a11y-photo-card {
+  display: flex;
+  gap: var(--gap-2);
+  padding: var(--gap-2);
+  background: var(--surface-2);
+  border: var(--border);
+  border-radius: var(--a11y-radius);
+}
+
+:root[data-a11y="on"] .a11y-photo-card.draggable {
+  cursor: grab;
+}
+
+:root[data-a11y="on"] .a11y-thumb-btn {
+  position: relative;
+  flex-shrink: 0;
+  display: block;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  line-height: 0;
+}
+
+:root[data-a11y="on"] .a11y-photo-thumb {
+  width: var(--tap-large);
+  height: var(--tap-large);
+  object-fit: cover;
+  border-radius: var(--a11y-radius);
+  border: var(--border);
+  background: var(--surface-2);
+}
+
+:root[data-a11y="on"] .a11y-photo-rank {
+  position: absolute;
+  bottom: -6px;
+  right: -6px;
+  min-width: 1.6rem;
+  height: 1.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  background: var(--ink);
+  color: var(--bg);
+  border: 2px solid var(--bg);
+  border-radius: 50%;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+:root[data-a11y="on"] .a11y-photo-info {
+  flex: 1;
+  min-width: 0;
+}
+
+:root[data-a11y="on"] .a11y-photo-name {
+  margin: 0 0 var(--gap-1);
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+:root[data-a11y="on"] .a11y-photo-author {
+  margin: 0 0 var(--gap-1);
+  font-size: 0.9rem;
+  color: var(--ink-2);
+}
+
+:root[data-a11y="on"] .a11y-badge-preferred {
+  display: inline-block;
+  margin-left: var(--gap-1);
+  padding: 2px 8px;
+  background: var(--action);
+  color: var(--bg);
+  border-radius: var(--a11y-radius);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+:root[data-a11y="on"] .a11y-badge-taken {
+  display: inline-block;
+  margin-left: var(--gap-1);
+  padding: 2px 8px;
+  background: var(--ink);
+  color: var(--bg);
+  border-radius: var(--a11y-radius);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+:root[data-a11y="on"] .a11y-link-btn {
+  display: inline-block;
+  min-height: var(--tap-min);
+  padding: 0 var(--gap-1);
+  background: none;
+  border: none;
+  color: var(--action);
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+:root[data-a11y="on"] .a11y-delete-btn {
+  flex-shrink: 0;
+  align-self: center;
+  width: var(--tap-min);
+  height: var(--tap-min);
+  background: var(--danger);
+  color: var(--bg);
+  border: none;
+  border-radius: var(--a11y-radius);
+  font-size: 1.2rem;
+}
+
+/* =====================================================================
+   Mode confort visuel — Liste de courses (stepper 88px, état "pris"
+   porté par 4 signaux redondants : fond, texte barré, pastille, label)
+   ===================================================================== */
+:root[data-a11y="on"] .a11y-shopping-list {
+  list-style: none;
+  margin: 0 0 var(--gap-3);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-2);
+}
+
+:root[data-a11y="on"] .a11y-shopping-item {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-2);
+  padding: var(--gap-2);
+  background: var(--surface-2);
+  border: var(--border);
+  border-radius: var(--a11y-radius);
+}
+
+:root[data-a11y="on"] .a11y-shopping-item.taken {
+  background: var(--bg);
+}
+
+:root[data-a11y="on"] .a11y-shopping-item-thumb,
+:root[data-a11y="on"] .a11y-shopping-item-thumb-placeholder {
+  width: var(--tap-large);
+  height: var(--tap-large);
+  flex-shrink: 0;
+  object-fit: cover;
+  border-radius: var(--a11y-radius);
+  border: var(--border);
+  background: var(--bg);
+}
+
+:root[data-a11y="on"] .a11y-shopping-item-thumb-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+}
+
+:root[data-a11y="on"] .a11y-taken-overlay {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 1.75rem;
+  height: 1.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--focus);
+  color: var(--ink);
+  border: 2px solid var(--bg);
+  border-radius: 50%;
+  font-weight: 700;
+}
+
+:root[data-a11y="on"] .a11y-shopping-item-info {
+  flex: 1;
+  min-width: 0;
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  color: inherit;
+  font: inherit;
+}
+
+:root[data-a11y="on"] .a11y-shopping-item-name {
+  display: block;
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+:root[data-a11y="on"] .a11y-shopping-item.taken .a11y-shopping-item-name {
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+  color: var(--ink-2);
+}
+
+:root[data-a11y="on"] .a11y-shopping-item-category {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.85rem;
+  color: var(--ink-2);
+}
+
+:root[data-a11y="on"] .a11y-shopping-item-qty-readonly {
+  flex-shrink: 0;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+
+:root[data-a11y="on"] .a11y-stepper {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-1);
+  flex-shrink: 0;
+}
+
+:root[data-a11y="on"] .a11y-stepper-btn {
+  width: var(--tap-large);
+  height: var(--tap-large);
+  background: var(--bg);
+  color: var(--ink);
+  border: var(--border);
+  border-radius: var(--a11y-radius);
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+:root[data-a11y="on"] .a11y-stepper-btn:disabled {
+  opacity: 0.4;
+}
+
+:root[data-a11y="on"] .a11y-stepper-value {
+  min-width: 4.5rem;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
