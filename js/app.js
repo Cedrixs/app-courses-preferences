@@ -86,6 +86,18 @@ createApp({
       // jamais affichées en même temps, contrairement au mode standard).
       a11yOn: a11y.isOn(),
       a11yActiveTab: 'ranked', // 'ranked' | 'unranked'
+
+      // Remplace window.confirm() : dialogue role="alertdialog" avec
+      // focus trap, utilisé par toutes les actions destructives/
+      // irréversibles de l'app (voir openConfirmSheet).
+      confirmSheet: {
+        open: false,
+        title: '',
+        message: '',
+        confirmLabel: '',
+        onConfirm: null,
+      },
+      confirmSheetTriggerEl: null,
     };
   },
 
@@ -107,6 +119,26 @@ createApp({
     },
     shoppingListPendingCount() {
       return this.shoppingListItems.filter((item) => !item.taken).length;
+    },
+  },
+
+  watch: {
+    // Focus trap minimal du ConfirmSheet : à l'ouverture, on mémorise
+    // l'élément qui avait le focus (pour l'y ramener à la fermeture) et
+    // on déplace le focus sur "Annuler" (choix par défaut le plus sûr
+    // pour une action destructive, au cas où une touche Entrée
+    // parasite arriverait juste après l'ouverture).
+    'confirmSheet.open'(isOpen) {
+      if (isOpen) {
+        this.confirmSheetTriggerEl = document.activeElement;
+        this.$nextTick(() => {
+          const cancelBtn = document.getElementById('confirm-sheet-cancel');
+          if (cancelBtn) cancelBtn.focus();
+        });
+      } else if (this.confirmSheetTriggerEl) {
+        this.confirmSheetTriggerEl.focus();
+        this.confirmSheetTriggerEl = null;
+      }
     },
   },
 
@@ -182,6 +214,47 @@ createApp({
         return 'Connexion impossible. Vérifie ta connexion internet et réessaie.';
       }
       return message;
+    },
+
+    // ---------------------------------------------------------------
+    // ConfirmSheet (remplace window.confirm())
+    // ---------------------------------------------------------------
+    openConfirmSheet({ title, message, confirmLabel, onConfirm }) {
+      this.confirmSheet = { open: true, title, message, confirmLabel, onConfirm };
+    },
+    closeConfirmSheet() {
+      this.confirmSheet.open = false;
+    },
+    async confirmSheetConfirm() {
+      const action = this.confirmSheet.onConfirm;
+      this.closeConfirmSheet();
+      if (action) await action();
+    },
+    // Piège le focus entre les deux seuls éléments focusables du
+    // dialogue (Annuler / CTA destructif) et ferme sur Échap — un
+    // alertdialog modal ne doit jamais laisser Tab s'échapper vers le
+    // reste de la page pendant qu'il est ouvert.
+    onConfirmSheetKeydown(event) {
+      if (event.key === 'Escape') {
+        this.closeConfirmSheet();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      // Ordre DOM : confirm-sheet-confirm (premier) puis confirm-sheet-cancel
+      // (dernier). On ne piège que les deux cas de "sortie" du dialogue :
+      // Maj+Tab depuis le premier boucle vers le dernier, Tab depuis le
+      // dernier boucle vers le premier. Les autres cas (Tab entre les deux
+      // dans l'ordre naturel) sont déjà gérés par le comportement natif.
+      const confirmBtn = document.getElementById('confirm-sheet-confirm');
+      const cancelBtn = document.getElementById('confirm-sheet-cancel');
+      if (!confirmBtn || !cancelBtn) return;
+      if (event.shiftKey && document.activeElement === confirmBtn) {
+        event.preventDefault();
+        cancelBtn.focus();
+      } else if (!event.shiftKey && document.activeElement === cancelBtn) {
+        event.preventDefault();
+        confirmBtn.focus();
+      }
     },
 
     // ---------------------------------------------------------------
@@ -528,17 +601,24 @@ createApp({
     // ---------------------------------------------------------------
     // Suppression d'une photo
     // ---------------------------------------------------------------
-    async confirmDeletePhoto(photo) {
-      if (!confirm(`Supprimer la photo "${photo.product_name}" ?`)) return;
-      try {
-        await api.deletePhoto(photo);
-        this.allPhotos = this.allPhotos.filter((p) => p.id !== photo.id);
-        const category = this.categories.find((c) => c.id === photo.category_id);
-        if (category) category.photo_count = Math.max(0, (category.photo_count || 0) - 1);
-        this.showSuccess('Photo supprimée.');
-      } catch (err) {
-        this.showError(err);
-      }
+    confirmDeletePhoto(photo) {
+      const categoryName = this.currentCategory ? this.currentCategory.name : '';
+      this.openConfirmSheet({
+        title: 'Supprimer cette photo ?',
+        message: `"${photo.product_name}" sera définitivement retirée de la catégorie ${categoryName}. Cette action est irréversible.`,
+        confirmLabel: 'Oui, supprimer',
+        onConfirm: async () => {
+          try {
+            await api.deletePhoto(photo);
+            this.allPhotos = this.allPhotos.filter((p) => p.id !== photo.id);
+            const category = this.categories.find((c) => c.id === photo.category_id);
+            if (category) category.photo_count = Math.max(0, (category.photo_count || 0) - 1);
+            this.showSuccess('Photo supprimée.');
+          } catch (err) {
+            this.showError(err);
+          }
+        },
+      });
     },
 
     // ---------------------------------------------------------------
@@ -581,15 +661,21 @@ createApp({
         this.showError(err);
       }
     },
-    async confirmDeleteCategory(category) {
-      if (!confirm(`Supprimer la catégorie "${category.name}" et toutes ses photos ?`)) return;
-      try {
-        await api.deleteCategory(category.id);
-        this.categories = this.categories.filter((c) => c.id !== category.id);
-        this.showSuccess('Catégorie supprimée.');
-      } catch (err) {
-        this.showError(err);
-      }
+    confirmDeleteCategory(category) {
+      this.openConfirmSheet({
+        title: 'Supprimer cette catégorie ?',
+        message: `"${category.name}" et toutes ses photos seront définitivement supprimées. Cette action est irréversible.`,
+        confirmLabel: 'Oui, supprimer',
+        onConfirm: async () => {
+          try {
+            await api.deleteCategory(category.id);
+            this.categories = this.categories.filter((c) => c.id !== category.id);
+            this.showSuccess('Catégorie supprimée.');
+          } catch (err) {
+            this.showError(err);
+          }
+        },
+      });
     },
     async submitAddCategory() {
       const name = this.newCategoryName.trim();
@@ -741,15 +827,21 @@ createApp({
         this.showError(err);
       }
     },
-    async deleteListItem(item) {
-      if (!confirm(`Retirer "${item.label}" de la liste ?`)) return;
-      try {
-        await api.deleteListItem(item.id);
-        this.shoppingListItems = this.shoppingListItems.filter((i) => i.id !== item.id);
-        announce(`"${item.label}" retiré de la liste.`);
-      } catch (err) {
-        this.showError(err);
-      }
+    deleteListItem(item) {
+      this.openConfirmSheet({
+        title: 'Retirer cet article ?',
+        message: `"${item.label}" sera retiré de la liste de courses. Cette action est irréversible.`,
+        confirmLabel: 'Oui, retirer',
+        onConfirm: async () => {
+          try {
+            await api.deleteListItem(item.id);
+            this.shoppingListItems = this.shoppingListItems.filter((i) => i.id !== item.id);
+            announce(`"${item.label}" retiré de la liste.`);
+          } catch (err) {
+            this.showError(err);
+          }
+        },
+      });
     },
     async toggleItemTaken(item) {
       if (this.role !== 'acheteur') return;
@@ -760,18 +852,22 @@ createApp({
         this.showError(err);
       }
     },
-    async confirmTerminerListe() {
-      if (!confirm('Terminer les courses ? La liste actuelle sera archivée et une nouvelle liste vide démarrera.')) {
-        return;
-      }
-      try {
-        const nouvelle = await api.terminerListeCourses();
-        this.shoppingList = nouvelle;
-        this.shoppingListItems = [];
-        this.showSuccess('Courses terminées, nouvelle liste prête.');
-      } catch (err) {
-        this.showError(err);
-      }
+    confirmTerminerListe() {
+      this.openConfirmSheet({
+        title: 'Terminer les courses ?',
+        message: 'La liste actuelle sera archivée et une nouvelle liste vide démarrera. Cette action est irréversible.',
+        confirmLabel: 'Oui, terminer',
+        onConfirm: async () => {
+          try {
+            const nouvelle = await api.terminerListeCourses();
+            this.shoppingList = nouvelle;
+            this.shoppingListItems = [];
+            this.showSuccess('Courses terminées, nouvelle liste prête.');
+          } catch (err) {
+            this.showError(err);
+          }
+        },
+      });
     },
   },
 }).mount('#app');

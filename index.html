@@ -682,6 +682,34 @@
   </div>
 
   <!-- =================================================================
+       ConfirmSheet (remplace window.confirm())
+       ================================================================= -->
+  <div
+    v-if="confirmSheet.open"
+    class="modal-overlay"
+    @click.self="closeConfirmSheet"
+    @keydown="onConfirmSheetKeydown"
+  >
+    <div
+      class="modal-sheet"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="confirm-sheet-title"
+      aria-describedby="confirm-sheet-message"
+    >
+      <p class="confirm-sheet-icon" aria-hidden="true">!</p>
+      <h2 id="confirm-sheet-title">{{ confirmSheet.title }}</h2>
+      <p id="confirm-sheet-message">{{ confirmSheet.message }}</p>
+      <button id="confirm-sheet-confirm" type="button" class="primary-btn confirm-sheet-danger-btn" @click="confirmSheetConfirm">
+        {{ confirmSheet.confirmLabel }}
+      </button>
+      <button id="confirm-sheet-cancel" type="button" class="secondary-btn" @click="closeConfirmSheet">
+        Annuler
+      </button>
+    </div>
+  </div>
+
+  <!-- =================================================================
        Lightbox (photo en plein écran)
        ================================================================= -->
   <div v-if="lightboxPhoto" class="lightbox" @click.self="closeLightbox">

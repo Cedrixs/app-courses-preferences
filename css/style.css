@@ -652,6 +652,25 @@ button.shopping-item-info {
   font-size: 1.15rem;
 }
 
+/* ConfirmSheet (remplace window.confirm()) */
+.confirm-sheet-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin-bottom: 12px;
+  border-radius: 50%;
+  background: #fbe4df;
+  color: var(--color-danger);
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.confirm-sheet-danger-btn {
+  background: var(--color-danger);
+}
+
 .modal-close {
   float: right;
   border: none;
