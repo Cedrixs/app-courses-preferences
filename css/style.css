@@ -19,6 +19,74 @@
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+/* =====================================================================
+   Mode confort visuel — design tokens
+   ===================================================================== */
+/* Activés uniquement quand data-a11y="on" est posé sur <html> (voir
+   js/a11y.js). Tant qu'aucune règle de composant ne consomme ces
+   variables, ce bloc est purement additif : il ne modifie aucun rendu
+   existant. Noms de variables volontairement distincts de ceux du
+   thème par défaut ci-dessus (--bg vs --color-bg, --ink vs
+   --color-text, --a11y-radius vs --radius, etc.) : une variable
+   CSS redéfinie sous :root[data-a11y="on"] s'appliquerait aussi aux
+   composants de l'interface actuelle qui la consomment déjà (même si
+   elle n'apparaît pas dans leur propre bloc de règles), ce qui casserait
+   la garantie "aucune régression tant que rien ne consomme ces tokens". */
+:root[data-a11y="on"] {
+  --bg: #FFFDF7;
+  --surface-2: #F1EDE1;
+  --ink: #0A0F0C;
+  --ink-2: #1F241E;
+  --action: #1F5940;
+  --danger: #A63A1A;
+  --focus: #FFD84D;
+
+  --font-body: 'Atkinson Hyperlegible', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --fs-body: 1.125rem; /* 18px */
+  --fs-title: 1.5rem; /* 24px */
+  --fs-h1: 2rem; /* 32px */
+  --lh-body: 1.5;
+
+  --tap-min: 3.5rem; /* 56px, WCAG 2.2 AA min 44px */
+  --tap-comfort: 4.5rem; /* 72px, boutons principaux */
+  --tap-large: 5.5rem; /* 88px, quantités +/-, clavier PIN */
+
+  --gap-1: .5rem;
+  --gap-2: 1rem;
+  --gap-3: 1.5rem;
+  --gap-4: 2rem;
+
+  --a11y-radius: 4px; /* bords nets = repères clairs, volontairement plus carré que le thème par défaut */
+  --border: 2px solid var(--ink);
+  --focus-ring: 4px solid var(--focus);
+}
+
+/* Variante sombre (éclairage faible / photophobie), combinée au mode confort. */
+:root[data-a11y="on"][data-theme="dark"] {
+  --bg: #0A0F0C;
+  --surface-2: #1A211D;
+  --ink: #FFFDF7;
+  --ink-2: #E9E6DF;
+  --action: #FFD84D; /* CTA jaune sur fond sombre */
+  --danger: #A63A1A;
+  --focus: #FFD84D;
+}
+
+:root[data-a11y="on"][data-text-size="large"] {
+  font-size: 115%;
+}
+
+:root[data-a11y="on"][data-text-size="xl"] {
+  font-size: 130%;
+}
+
+/* Focus clavier visible, obligatoire (WCAG 2.2 AA). */
+:root[data-a11y="on"] :focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
 * {
   box-sizing: border-box;
 }
