@@ -9,7 +9,7 @@
 // installable), et de mettre en cache l'app shell pour un chargement
 // plus rapide au second lancement.
 
-const CACHE_NAME = 'courses-preferences-v2';
+const CACHE_NAME = 'courses-preferences-v3';
 
 const APP_SHELL = [
   './',
