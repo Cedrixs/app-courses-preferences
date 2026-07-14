@@ -216,6 +216,10 @@ button.shopping-item-info {
   background: var(--color-accent);
 }
 
+.role-button-comfort {
+  background: var(--color-text);
+}
+
 .role-button:active {
   transform: scale(0.98);
 }
@@ -1059,6 +1063,7 @@ button.shopping-item-info {
   min-height: var(--tap-min);
   min-width: var(--tap-min);
   background: transparent;
+  color: var(--bg);
   border: 2px solid var(--bg);
   border-radius: var(--a11y-radius);
   font-size: 1rem;
@@ -1104,6 +1109,16 @@ button.shopping-item-info {
   background: var(--surface-2);
   color: var(--action);
   border-color: var(--action);
+}
+
+/* .empty-hint (chargement/état vide) utilise --color-text-muted, un
+   token figé qui ne s'inverse pas en thème sombre — sans cette règle,
+   ce texte resterait gris moyen sur fond quasi noir (contraste
+   insuffisant). --ink-2 est prévu pour ce rôle et s'inverse avec le
+   thème (voir tokens ci-dessus, "Texte secondaire 15.8:1"). */
+:root[data-a11y="on"] .empty-hint {
+  color: var(--ink-2);
+  font-family: var(--font-body);
 }
 
 /* =====================================================================
@@ -1497,4 +1512,140 @@ button.shopping-item-info {
   text-align: center;
   font-family: var(--font-mono);
   font-weight: 700;
+}
+
+/* =====================================================================
+   Écran Réglages (consommateur uniquement)
+   ===================================================================== */
+.settings-view {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.settings-section {
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.settings-row + .settings-row {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border);
+}
+
+.settings-label {
+  margin: 0;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.settings-hint {
+  margin: 4px 0 0;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+/* Bouton on/off : l'état est toujours porté par le texte ON/OFF, la
+   couleur n'est qu'un renfort visuel (jamais le seul signal). */
+.settings-toggle {
+  flex-shrink: 0;
+  min-width: 64px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 999px;
+  background: var(--color-border);
+  color: var(--color-text-muted);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.settings-toggle.on {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.settings-choice-group {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.settings-choice {
+  flex: 1;
+  min-width: 90px;
+  padding: 12px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.settings-choice.active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+  font-weight: 700;
+}
+
+/* Réhabillage CSS pur (comme le reste du chrome partagé, voir plus haut) :
+   même écran, mêmes classes, juste des couleurs/tailles différentes. */
+:root[data-a11y="on"] .settings-section {
+  background: var(--surface-2);
+  border: var(--border);
+  box-shadow: none;
+  border-radius: var(--a11y-radius);
+}
+
+:root[data-a11y="on"] .settings-label {
+  font-family: var(--font-body);
+  font-size: 1.05rem;
+}
+
+:root[data-a11y="on"] .settings-hint {
+  font-family: var(--font-body);
+  color: var(--ink-2);
+}
+
+:root[data-a11y="on"] .settings-toggle {
+  min-width: var(--tap-comfort);
+  min-height: var(--tap-min);
+  border: var(--border);
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  border-radius: var(--a11y-radius);
+}
+
+:root[data-a11y="on"] .settings-toggle.on {
+  background: var(--action);
+  color: var(--bg);
+  border-color: var(--action);
+}
+
+:root[data-a11y="on"] .settings-choice {
+  min-height: var(--tap-min);
+  border: var(--border);
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  border-radius: var(--a11y-radius);
+}
+
+:root[data-a11y="on"] .settings-choice.active {
+  background: var(--action);
+  border-color: var(--action);
+  color: var(--bg);
 }

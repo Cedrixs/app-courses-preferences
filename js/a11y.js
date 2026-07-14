@@ -53,6 +53,14 @@ const a11y = {
     document.documentElement.dataset.textSize = size;
   },
 
+  getTheme() {
+    return localStorage.getItem(A11Y_KEYS.theme) || 'light';
+  },
+
+  getTextSize() {
+    return localStorage.getItem(A11Y_KEYS.textSize) || 'normal';
+  },
+
   setVibrate(enabled) {
     localStorage.setItem(A11Y_KEYS.vibrate, enabled ? 'on' : 'off');
   },

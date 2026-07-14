@@ -86,6 +86,10 @@ createApp({
       // jamais affichées en même temps, contrairement au mode standard).
       a11yOn: a11y.isOn(),
       a11yActiveTab: 'ranked', // 'ranked' | 'unranked'
+      a11yTheme: a11y.getTheme(),
+      a11yTextSize: a11y.getTextSize(),
+      a11yVibrate: a11y.vibrateEnabled(),
+      a11ySound: a11y.soundEnabled(),
 
       // Remplace window.confirm() : dialogue role="alertdialog" avec
       // focus trap, utilisé par toutes les actions destructives/
@@ -149,6 +153,14 @@ createApp({
     window.addEventListener('storage', (event) => {
       if (event.key === 'a11yMode') {
         this.a11yOn = a11y.isOn();
+      } else if (event.key === 'a11yTheme') {
+        this.a11yTheme = a11y.getTheme();
+      } else if (event.key === 'a11yTextSize') {
+        this.a11yTextSize = a11y.getTextSize();
+      } else if (event.key === 'a11yVibrate') {
+        this.a11yVibrate = a11y.vibrateEnabled();
+      } else if (event.key === 'a11ySound') {
+        this.a11ySound = a11y.soundEnabled();
       }
     });
 
@@ -265,6 +277,14 @@ createApp({
       this.pinInput = '';
       this.pinError = '';
       this.view = 'pin';
+    },
+    // Entrée rapide "mode confort" depuis l'écran de choix de rôle :
+    // force le mode ON (même si l'utilisateur l'avait désactivé lors
+    // d'une session précédente), puis enchaîne sur le PIN consommateur.
+    chooseRoleWithComfort() {
+      a11y.setMode('on');
+      this.a11yOn = true;
+      this.chooseRole('consommateur');
     },
     backToRoleSelect() {
       this.pendingRole = null;
@@ -690,6 +710,35 @@ createApp({
       } catch (err) {
         this.showError(err);
       }
+    },
+
+    // ---------------------------------------------------------------
+    // Réglages (mode confort visuel)
+    // ---------------------------------------------------------------
+    openSettings() {
+      this.view = 'settings';
+    },
+    toggleA11yMode() {
+      const next = this.a11yOn ? 'off' : 'on';
+      a11y.setMode(next);
+      this.a11yOn = a11y.isOn();
+      announce(this.a11yOn ? 'Mode confort visuel activé.' : 'Mode confort visuel désactivé.');
+    },
+    setA11yTextSize(size) {
+      a11y.setTextSize(size);
+      this.a11yTextSize = size;
+    },
+    setA11yTheme(theme) {
+      a11y.setTheme(theme);
+      this.a11yTheme = theme;
+    },
+    toggleA11yVibrate() {
+      this.a11yVibrate = !this.a11yVibrate;
+      a11y.setVibrate(this.a11yVibrate);
+    },
+    toggleA11ySound() {
+      this.a11ySound = !this.a11ySound;
+      a11y.setSound(this.a11ySound);
     },
 
     // ---------------------------------------------------------------

@@ -40,6 +40,7 @@
     <h1>Courses & Préférences</h1>
     <p>Qui es-tu ?</p>
     <div class="role-buttons">
+      <button class="role-button role-button-comfort" @click="chooseRoleWithComfort">👁️ Consommateur — mode confort</button>
       <button class="role-button" @click="chooseRole('consommateur')">🍽️ Consommateur</button>
       <button class="role-button acheteur" @click="chooseRole('acheteur')">🛒 Acheteur</button>
     </div>
@@ -95,6 +96,7 @@
     <!-- ---------------- Vue : liste des catégories (mode confort) ---------------- -->
     <div v-if="view === 'categories' && a11yOn" class="view">
       <button type="button" class="a11y-manage-btn" @click="openManageCategories">⚙️ Gérer les catégories</button>
+      <button v-if="role === 'consommateur'" type="button" class="a11y-manage-btn" @click="openSettings">⚙️ Réglages</button>
 
       <p v-if="loadingCategories" class="empty-hint" role="status">Chargement des catégories…</p>
       <ul v-else class="a11y-category-grid" role="list">
@@ -115,6 +117,7 @@
     <!-- ---------------- Vue : liste des catégories ---------------- -->
     <div v-if="view === 'categories' && !a11yOn" class="view">
       <button class="top-bar-btn" style="margin-bottom:14px;background:#e2e1da;color:#22271f" @click="openManageCategories">⚙️ Gérer les catégories</button>
+      <button v-if="role === 'consommateur'" class="top-bar-btn" style="margin-bottom:14px;background:#e2e1da;color:#22271f" @click="openSettings">⚙️ Réglages</button>
 
       <div v-if="loadingCategories" class="empty-hint">Chargement des catégories…</div>
       <div v-else class="category-grid">
@@ -580,6 +583,125 @@
         🛒 Liste<span v-if="shoppingListPendingCount > 0"> ({{ shoppingListPendingCount }})</span>
       </button>
     </nav>
+  </template>
+
+  <!-- =================================================================
+       Écran Réglages (consommateur uniquement)
+       ================================================================= -->
+  <template v-if="view === 'settings'">
+    <div class="top-bar">
+      <button class="top-bar-btn" @click="goToCategories" aria-label="Retour aux catégories">&larr;</button>
+      <h1>Réglages</h1>
+      <span class="role-badge">🍽️ Consommateur</span>
+      <button class="top-bar-btn" @click="doLogout">Déconnexion</button>
+    </div>
+
+    <div class="view settings-view">
+      <section class="settings-section">
+        <div class="settings-row">
+          <div>
+            <p class="settings-label">Confort visuel</p>
+            <p class="settings-hint">Contraste élevé, gros caractères, cibles larges.</p>
+          </div>
+          <button
+            type="button"
+            class="settings-toggle"
+            :class="{ on: a11yOn }"
+            :aria-pressed="a11yOn"
+            @click="toggleA11yMode"
+          >
+            {{ a11yOn ? 'ON' : 'OFF' }}
+          </button>
+        </div>
+      </section>
+
+      <template v-if="a11yOn">
+        <section class="settings-section">
+          <p class="settings-label">Taille du texte</p>
+          <div class="settings-choice-group" role="radiogroup" aria-label="Taille du texte">
+            <button
+              type="button"
+              class="settings-choice"
+              :class="{ active: a11yTextSize === 'normal' }"
+              :aria-pressed="a11yTextSize === 'normal'"
+              @click="setA11yTextSize('normal')"
+            >
+              A Normal
+            </button>
+            <button
+              type="button"
+              class="settings-choice"
+              :class="{ active: a11yTextSize === 'large' }"
+              :aria-pressed="a11yTextSize === 'large'"
+              @click="setA11yTextSize('large')"
+            >
+              A Grand
+            </button>
+            <button
+              type="button"
+              class="settings-choice"
+              :class="{ active: a11yTextSize === 'xl' }"
+              :aria-pressed="a11yTextSize === 'xl'"
+              @click="setA11yTextSize('xl')"
+            >
+              A Très grand
+            </button>
+          </div>
+        </section>
+
+        <section class="settings-section">
+          <p class="settings-label">Thème</p>
+          <div class="settings-choice-group" role="radiogroup" aria-label="Thème">
+            <button
+              type="button"
+              class="settings-choice"
+              :class="{ active: a11yTheme === 'light' }"
+              :aria-pressed="a11yTheme === 'light'"
+              @click="setA11yTheme('light')"
+            >
+              Clair
+            </button>
+            <button
+              type="button"
+              class="settings-choice"
+              :class="{ active: a11yTheme === 'dark' }"
+              :aria-pressed="a11yTheme === 'dark'"
+              @click="setA11yTheme('dark')"
+            >
+              Sombre
+            </button>
+          </div>
+        </section>
+
+        <section class="settings-section">
+          <p class="settings-label">Feedback</p>
+          <div class="settings-row">
+            <p>Vibration</p>
+            <button
+              type="button"
+              class="settings-toggle"
+              :class="{ on: a11yVibrate }"
+              :aria-pressed="a11yVibrate"
+              @click="toggleA11yVibrate"
+            >
+              {{ a11yVibrate ? 'ON' : 'OFF' }}
+            </button>
+          </div>
+          <div class="settings-row">
+            <p>Son de confirmation</p>
+            <button
+              type="button"
+              class="settings-toggle"
+              :class="{ on: a11ySound }"
+              :aria-pressed="a11ySound"
+              @click="toggleA11ySound"
+            >
+              {{ a11ySound ? 'ON' : 'OFF' }}
+            </button>
+          </div>
+        </section>
+      </template>
+    </div>
   </template>
 
   <!-- =================================================================
