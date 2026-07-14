@@ -33,6 +33,19 @@ Pour vérifier que l'anti-pause fonctionne : sur GitHub, onglet **Actions** du d
 
 ---
 
+## ⚠️ Déployer une mise à jour : penser au cache du service worker
+
+`git push` sur `main` suffit à déclencher le redéploiement (GitHub Pages redéploie automatiquement en moins d'une minute). **Mais** dès qu'une mise à jour modifie `index.html`, `css/style.css` ou un fichier dans `js/` : il faut aussi incrémenter `CACHE_NAME` dans `service-worker.js` (ex. `courses-preferences-v3` → `v4`), sinon les téléphones ayant déjà ouvert l'app une fois continuent de recevoir les anciens fichiers en cache pendant un cycle supplémentaire (le service worker sert le cache en priorité et ne rafraîchit qu'en arrière-plan pour la prochaine visite) — un utilisateur peut alors voir un mélange d'ancien et de nouveau code selon les fichiers.
+
+Réflexe à chaque déploiement qui touche ces fichiers :
+1. Modifier le code.
+2. Incrémenter `CACHE_NAME` d'une valeur dans `service-worker.js`.
+3. `git push` (les deux dans le même commit, ou deux commits, peu importe, mais jamais l'un sans l'autre).
+
+Si un utilisateur signale un écran qui n'a "pas l'air à jour" après un déploiement, la première chose à vérifier est si `CACHE_NAME` a bien été incrémenté sur le dernier push — pas forcément un bug de code.
+
+---
+
 ## Changer les codes PIN
 
 1. Dans Supabase : **Authentication** > **Users**.
