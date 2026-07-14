@@ -422,37 +422,50 @@
               class="a11y-shopping-item"
               :class="{ taken: item.taken }"
             >
-              <button
-                v-if="item.photos"
-                type="button"
-                class="a11y-thumb-btn"
-                @click="openLightbox({ ...item.photos, product_name: item.label })"
-                :aria-label="`Voir la photo de ${item.label} en grand`"
-              >
-                <img class="a11y-shopping-item-thumb" :src="photoUrl(item.photos)" :alt="item.label" />
-                <span v-if="item.taken" class="a11y-taken-overlay" aria-hidden="true">✓</span>
-              </button>
-              <div v-else class="a11y-shopping-item-thumb a11y-shopping-item-thumb-placeholder" aria-hidden="true">📝</div>
+              <div class="a11y-shopping-item-main">
+                <button
+                  v-if="item.photos"
+                  type="button"
+                  class="a11y-thumb-btn"
+                  @click="openLightbox({ ...item.photos, product_name: item.label })"
+                  :aria-label="`Voir la photo de ${item.label} en grand`"
+                >
+                  <img class="a11y-shopping-item-thumb" :src="photoUrl(item.photos)" :alt="item.label" />
+                  <span v-if="item.taken" class="a11y-taken-overlay" aria-hidden="true">✓</span>
+                </button>
+                <div v-else class="a11y-shopping-item-thumb a11y-shopping-item-thumb-placeholder" aria-hidden="true">📝</div>
 
-              <button
-                v-if="role === 'acheteur'"
-                type="button"
-                class="a11y-shopping-item-info"
-                @click="toggleItemTaken(item)"
-                :aria-pressed="item.taken"
-              >
-                <span class="a11y-shopping-item-name">
-                  {{ item.label }}
-                  <span v-if="item.taken" class="a11y-badge-taken">PRIS</span>
-                </span>
-                <span class="a11y-shopping-item-category">{{ item.categories ? item.categories.name : '' }}</span>
-              </button>
-              <div v-else class="a11y-shopping-item-info">
-                <p class="a11y-shopping-item-name">
-                  {{ item.label }}
-                  <span v-if="item.taken" class="a11y-badge-taken">PRIS</span>
-                </p>
-                <p class="a11y-shopping-item-category">{{ item.categories ? item.categories.name : '' }}</p>
+                <button
+                  v-if="role === 'acheteur'"
+                  type="button"
+                  class="a11y-shopping-item-info"
+                  @click="toggleItemTaken(item)"
+                  :aria-pressed="item.taken"
+                >
+                  <span class="a11y-shopping-item-name">
+                    {{ item.label }}
+                    <span v-if="item.taken" class="a11y-badge-taken">PRIS</span>
+                  </span>
+                  <span class="a11y-shopping-item-category">{{ item.categories ? item.categories.name : '' }}</span>
+                </button>
+                <div v-else class="a11y-shopping-item-info">
+                  <p class="a11y-shopping-item-name">
+                    {{ item.label }}
+                    <span v-if="item.taken" class="a11y-badge-taken">PRIS</span>
+                  </p>
+                  <p class="a11y-shopping-item-category">{{ item.categories ? item.categories.name : '' }}</p>
+                </div>
+
+                <p class="a11y-shopping-item-qty-readonly" v-if="role !== 'consommateur'">× {{ item.quantity }}</p>
+
+                <button
+                  v-if="role === 'consommateur'"
+                  class="a11y-delete-btn"
+                  @click="deleteListItem(item)"
+                  aria-label="Retirer de la liste"
+                >
+                  🗑️
+                </button>
               </div>
 
               <div class="a11y-stepper" v-if="role === 'consommateur'">
@@ -460,16 +473,6 @@
                 <output class="a11y-stepper-value">{{ item.quantity }} unité{{ item.quantity !== 1 ? 's' : '' }}</output>
                 <button type="button" class="a11y-stepper-btn" @click="incrementItem(item)" aria-label="Augmenter la quantité">+</button>
               </div>
-              <p class="a11y-shopping-item-qty-readonly" v-else>× {{ item.quantity }}</p>
-
-              <button
-                v-if="role === 'consommateur'"
-                class="a11y-delete-btn"
-                @click="deleteListItem(item)"
-                aria-label="Retirer de la liste"
-              >
-                🗑️
-              </button>
             </li>
           </ul>
 
@@ -710,9 +713,58 @@
   </template>
 
   <!-- =================================================================
+       Modale : ajout d'une photo (mode confort)
+       ================================================================= -->
+  <div v-if="showAddPhotoModal && a11yOn" class="modal-overlay" @click.self="closeAddPhotoModal">
+    <div class="modal-sheet a11y-modal-sheet">
+      <button type="button" class="a11y-modal-close" @click="closeAddPhotoModal" aria-label="Fermer">✕</button>
+      <p class="a11y-modal-eyebrow">Nouvelle photo</p>
+      <h2>Ajouter</h2>
+
+      <div class="a11y-form-field">
+        <label for="a11y-add-photo-category">Catégorie</label>
+        <select id="a11y-add-photo-category" class="a11y-select" v-model="addPhotoCategoryId">
+          <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+        </select>
+      </div>
+
+      <div class="a11y-capture-buttons">
+        <label class="a11y-capture-btn">
+          <input type="file" accept="image/*" capture="environment" @change="onPhotoFileSelected" />
+          <span class="a11y-capture-icon" aria-hidden="true">📷</span>
+          <span class="a11y-capture-text">
+            <span class="a11y-capture-label">Prendre une photo</span>
+            <span class="a11y-capture-hint">Ouvre l'appareil photo</span>
+          </span>
+        </label>
+        <label class="a11y-capture-btn">
+          <input type="file" accept="image/*" @change="onPhotoFileSelected" />
+          <span class="a11y-capture-icon" aria-hidden="true">🖼️</span>
+          <span class="a11y-capture-text">
+            <span class="a11y-capture-label">Depuis la galerie</span>
+            <span class="a11y-capture-hint">Choisir une image existante</span>
+          </span>
+        </label>
+      </div>
+
+      <img v-if="addPhotoPreviewUrl" class="a11y-image-preview" :src="addPhotoPreviewUrl" alt="Aperçu" />
+
+      <div class="a11y-form-field">
+        <label for="a11y-add-photo-product-name">Nom du produit</label>
+        <input id="a11y-add-photo-product-name" type="text" class="a11y-input" v-model="addPhotoProductName" placeholder="Ex : Yaourt nature Danone" />
+      </div>
+
+      <button type="button" class="a11y-primary-btn" :disabled="!canSubmitPhoto || uploading" @click="submitAddPhoto">
+        <span v-if="uploading" class="spinner"></span>{{ uploading ? 'Envoi en cours…' : 'Ajouter' }}
+      </button>
+      <button type="button" class="a11y-secondary-btn" @click="closeAddPhotoModal">Terminé</button>
+    </div>
+  </div>
+
+  <!-- =================================================================
        Modale : ajout d'une photo
        ================================================================= -->
-  <div v-if="showAddPhotoModal" class="modal-overlay" @click.self="closeAddPhotoModal">
+  <div v-if="showAddPhotoModal && !a11yOn" class="modal-overlay" @click.self="closeAddPhotoModal">
     <div class="modal-sheet">
       <button class="modal-close" @click="closeAddPhotoModal" aria-label="Fermer">✕</button>
       <h2>Ajouter une photo</h2>

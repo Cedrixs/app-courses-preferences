@@ -1049,14 +1049,21 @@ button.shopping-item-info {
   line-height: var(--lh-body);
 }
 
+/* flex-wrap : à largeur de téléphone, le titre agrandi (--fs-title) ne
+   tient plus toujours sur la même ligne que le badge de rôle et le
+   bouton Déconnexion — ils passent alors sur une deuxième ligne plutôt
+   que de se chevaucher. */
 :root[data-a11y="on"] .top-bar {
   background: var(--ink);
   color: var(--bg);
   min-height: var(--tap-comfort);
+  flex-wrap: wrap;
+  row-gap: var(--gap-1);
 }
 
 :root[data-a11y="on"] .top-bar h1 {
   font-size: var(--fs-title);
+  flex-basis: 100%;
 }
 
 :root[data-a11y="on"] .top-bar-btn {
@@ -1327,6 +1334,7 @@ button.shopping-item-info {
   margin: 0 0 var(--gap-1);
   font-size: 1.125rem;
   font-weight: 700;
+  overflow-wrap: break-word;
 }
 
 :root[data-a11y="on"] .a11y-photo-author {
@@ -1396,14 +1404,27 @@ button.shopping-item-info {
   gap: var(--gap-2);
 }
 
+/* Carte en 2 lignes : ligne principale (vignette/nom/corbeille) puis
+   stepper sur toute la largeur en dessous. Nécessaire dès que la
+   vignette (88px) + le nom + les deux boutons du stepper (88px chacun)
+   + la corbeille (56px) ne tiennent plus sur une seule ligne à largeur
+   de téléphone — aucun de ces éléments ne peut rétrécir sans descendre
+   sous les cibles tactiles WCAG visées par le mode confort. */
 :root[data-a11y="on"] .a11y-shopping-item {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: var(--gap-2);
   padding: var(--gap-2);
   background: var(--surface-2);
   border: var(--border);
   border-radius: var(--a11y-radius);
+}
+
+:root[data-a11y="on"] .a11y-shopping-item-main {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-2);
+  min-width: 0;
 }
 
 :root[data-a11y="on"] .a11y-shopping-item.taken {
@@ -1463,6 +1484,7 @@ button.shopping-item-info {
   margin: 0;
   font-size: 1.05rem;
   font-weight: 700;
+  overflow-wrap: break-word;
 }
 
 :root[data-a11y="on"] .a11y-shopping-item.taken .a11y-shopping-item-name {
@@ -1488,8 +1510,9 @@ button.shopping-item-info {
 :root[data-a11y="on"] .a11y-stepper {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: var(--gap-1);
-  flex-shrink: 0;
+  width: 100%;
 }
 
 :root[data-a11y="on"] .a11y-stepper-btn {
@@ -1512,6 +1535,117 @@ button.shopping-item-info {
   text-align: center;
   font-family: var(--font-mono);
   font-weight: 700;
+}
+
+/* =====================================================================
+   Mode confort visuel — Modale "Ajouter une photo"
+   ===================================================================== */
+:root[data-a11y="on"] .a11y-modal-sheet {
+  background: var(--bg);
+  color: var(--ink);
+  border: var(--border);
+  border-radius: var(--a11y-radius) var(--a11y-radius) 0 0;
+  font-family: var(--font-body);
+}
+
+:root[data-a11y="on"] .a11y-modal-close {
+  float: right;
+  width: var(--tap-min);
+  height: var(--tap-min);
+  background: var(--surface-2);
+  color: var(--ink);
+  border: var(--border);
+  border-radius: 50%;
+  font-size: 1.2rem;
+}
+
+:root[data-a11y="on"] .a11y-modal-eyebrow {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--ink-2);
+  text-transform: uppercase;
+}
+
+:root[data-a11y="on"] .a11y-modal-sheet h2 {
+  margin: 4px 0 var(--gap-3);
+  font-size: var(--fs-title);
+}
+
+:root[data-a11y="on"] .a11y-form-field {
+  margin-bottom: var(--gap-3);
+}
+
+:root[data-a11y="on"] .a11y-form-field label {
+  display: block;
+  margin-bottom: var(--gap-1);
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+:root[data-a11y="on"] .a11y-select,
+:root[data-a11y="on"] .a11y-input {
+  width: 100%;
+  min-height: var(--tap-min);
+  padding: 0 var(--gap-2);
+  border: var(--border);
+  border-radius: var(--a11y-radius);
+  background: var(--surface-2);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 1rem;
+}
+
+:root[data-a11y="on"] .a11y-capture-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-2);
+  margin-bottom: var(--gap-3);
+}
+
+:root[data-a11y="on"] .a11y-capture-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-2);
+  min-height: var(--tap-comfort);
+  padding: var(--gap-2);
+  border: var(--border);
+  border-radius: var(--a11y-radius);
+  background: var(--surface-2);
+}
+
+:root[data-a11y="on"] .a11y-capture-btn input[type='file'] {
+  display: none;
+}
+
+:root[data-a11y="on"] .a11y-capture-icon {
+  flex-shrink: 0;
+  font-size: 1.8rem;
+}
+
+:root[data-a11y="on"] .a11y-capture-text {
+  display: flex;
+  flex-direction: column;
+}
+
+:root[data-a11y="on"] .a11y-capture-label {
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+:root[data-a11y="on"] .a11y-capture-hint {
+  font-size: 0.85rem;
+  color: var(--ink-2);
+}
+
+:root[data-a11y="on"] .a11y-image-preview {
+  display: block;
+  width: 100%;
+  max-height: 240px;
+  object-fit: cover;
+  border-radius: var(--a11y-radius);
+  border: var(--border);
+  margin-bottom: var(--gap-3);
 }
 
 /* =====================================================================

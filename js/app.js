@@ -425,6 +425,15 @@ createApp({
             chosenClass: 'sortable-chosen',
             filter: '.delete-photo-btn',
             preventOnFilter: false,
+            // Sans ce délai, le premier contact tactile sur une carte
+            // démarre systématiquement un glisser-déposer et empêche de
+            // faire défiler la page en posant le doigt dessus. Un léger
+            // temps de presser-maintenir (tactile uniquement, la souris
+            // n'est pas concernée) laisse un simple geste de défilement
+            // s'exécuter normalement.
+            delay: 150,
+            delayOnTouchOnly: true,
+            touchStartThreshold: 5,
             onEnd: () => this.syncPhotoOrderFromDom(),
           })
         );
@@ -458,6 +467,12 @@ createApp({
           // semblait alors ne "rien faire" au clic.
           filter: '.delete-photo-btn',
           preventOnFilter: false,
+          // Voir le commentaire équivalent dans la branche mode confort
+          // ci-dessus : sans délai tactile, poser le doigt sur une carte
+          // pour faire défiler la page démarrait un glisser-déposer.
+          delay: 150,
+          delayOnTouchOnly: true,
+          touchStartThreshold: 5,
           onEnd: () => this.syncPhotoOrderFromDom(),
         })
       );
@@ -470,6 +485,9 @@ createApp({
           chosenClass: 'sortable-chosen',
           filter: '.delete-photo-btn',
           preventOnFilter: false,
+          delay: 150,
+          delayOnTouchOnly: true,
+          touchStartThreshold: 5,
           onEnd: () => this.syncPhotoOrderFromDom(),
         })
       );
